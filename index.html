@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haftalik Vardiya Takip</title>
+    <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #0a0a0f;
+    min-height: 100vh;
+    color: #fff;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background:
+        radial-gradient(ellipse at 20% 50%, rgba(120, 40, 200, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255, 50, 100, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(0, 150, 255, 0.08) 0%, transparent 50%);
+    z-index: -1;
+}
+
+.noise-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+header { text-align: center; margin-bottom: 24px; }
+
+header h1 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #f472b6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 5px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tab {
+    flex: 1;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.tab:hover { color: rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.05); }
+
+.tab.active {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(244, 114, 182, 0.2));
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(167, 139, 250, 0.15);
+}
+
+.tab-icon { font-size: 1rem; }
+.tab-content { animation: fadeIn 0.3s ease; }
+.tab-content.hidden { display: none; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.week-info { text-align: center; }
+.week-info h2 { font-size: 1.1rem; font-weight: 700; }
+.week-info span { font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); }
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: none;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #a78bfa 0%, #f472b6 100%);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(167, 139, 250, 0.25);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(167, 139, 250, 0.35);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
+
+.btn-icon {
+    width: 36px; height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.btn-sm { padding: 5px 10px; font-size: 0.7rem; border-radius: 8px; }
+
+.btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+
+.week-legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.legend-color {
+    width: 14px; height: 14px;
+    border-radius: 4px;
+}
+
+.legend-sabah { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.legend-aksam { background: linear-gradient(135deg, #f97316, #ea580c); }
+.legend-ogle { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.legend-izin { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+.legend-ozel { background: linear-gradient(135deg, #a855f7, #8b5cf6); }
+
+.week-grid-container {
+    overflow-x: auto;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.week-grid { display: grid; min-width: 800px; }
+.week-grid-header { display: contents; }
+
+.week-grid-header .grid-cell {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.week-grid-header .grid-cell.today {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(244, 114, 182, 0.15));
+    color: #a78bfa;
+}
+
+.week-grid-header .grid-cell .day-name {
+    display: block;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 400;
+    text-transform: uppercase;
+}
+
+.week-grid-header .grid-cell .day-num {
+    display: block;
+    font-size: 1rem;
+    margin-top: 2px;
+}
+
+.grid-row { display: contents; }
+
+.grid-cell {
+    padding: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+    min-height: 60px;
+    vertical-align: top;
+}
+
+.grid-cell.today-col { background: rgba(167, 139, 250, 0.03); }
+
+.grid-cell.employee-name-cell {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #0d0d14;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+.grid-cell.employee-name-cell .emp-avatar {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(244, 114, 182, 0.2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #a78bfa;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.shift-badge {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    margin-bottom: 3px;
+    width: 100%;
+    text-align: center;
+}
+
+.shift-badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.shift-badge.sabah {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.shift-badge.aksam {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.2));
+    color: #f97316;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.shift-badge.gece {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.2));
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.shift-badge.ogle {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2));
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.shift-badge.gunluk {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2));
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.shift-badge.ozel {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.2));
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.shift-badge.tatil {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.shift-badge.izin {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(8, 145, 178, 0.2));
+    color: #22d3ee;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.add-shift-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 6px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 1.2rem;
+}
+
+.add-shift-cell:hover {
+    border-color: rgba(167, 139, 250, 0.3);
+    color: #a78bfa;
+    background: rgba(167, 139, 250, 0.05);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.9rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.section-header h2 { font-size: 1.25rem; font-weight: 700; }
+
+.employee-list { display: flex; flex-direction: column; gap: 10px; }
+
+.employee-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 14px;
+    padding: 16px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s;
+}
+
+.employee-card:hover {
+    border-color: rgba(167, 139, 250, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.employee-info { display: flex; align-items: center; gap: 14px; }
+
+.employee-avatar {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(244, 114, 182, 0.2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #a78bfa;
+    flex-shrink: 0;
+}
+
+.employee-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 2px; }
+.employee-role { font-size: 0.8rem; color: rgba(255, 255, 255, 0.4); }
+.employee-actions { display: flex; gap: 8px; }
+
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-overlay.hidden { display: none; }
+
+.modal {
+    background: #12121a;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 440px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    animation: modalIn 0.3s ease;
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal-header h3 { font-size: 1rem; font-weight: 700; }
+
+.modal-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.3s;
+}
+
+.modal-close:hover { color: #fff; }
+.modal-body { padding: 22px; }
+.form-group { margin-bottom: 16px; }
+
+.form-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: rgba(167, 139, 250, 0.4);
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+}
+
+.form-group select option { background: #1a1a2e; }
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 14px;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.overtime-display {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.overtime-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 0.8rem;
+}
+
+.overtime-item span { color: rgba(255, 255, 255, 0.5); }
+.overtime-item strong { color: #fff; }
+
+.overtime-item.highlight {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 6px;
+    padding-top: 10px;
+}
+
+.overtime-item.highlight strong { font-size: 1rem; }
+
+.shift-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.shift-type-btn {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.shift-type-btn:hover { transform: translateY(-1px); }
+.shift-type-btn.active { transform: scale(1.02); }
+
+.shift-type-btn.sabah { border-color: rgba(251, 191, 36, 0.2); }
+.shift-type-btn.sabah:hover,
+.shift-type-btn.sabah.active {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.4);
+}
+
+.shift-type-btn.aksam { border-color: rgba(249, 115, 22, 0.2); }
+.shift-type-btn.aksam:hover,
+.shift-type-btn.aksam.active {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: rgba(249, 115, 22, 0.4);
+}
+
+.shift-type-btn.ogle { border-color: rgba(34, 197, 94, 0.2); }
+.shift-type-btn.ogle:hover,
+.shift-type-btn.ogle.active {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.shift-type-btn.ozel { border-color: rgba(168, 85, 247, 0.2); }
+.shift-type-btn.ozel:hover,
+.shift-type-btn.ozel.active {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: rgba(168, 85, 247, 0.4);
+}
+
+.shift-type-btn.izin { border-color: rgba(6, 182, 212, 0.2); }
+.shift-type-btn.izin:hover,
+.shift-type-btn.izin.active {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: rgba(6, 182, 212, 0.4);
+}
+
+.shift-type-label { font-size: 0.85rem; font-weight: 600; }
+.shift-type-time { font-size: 0.7rem; color: rgba(255, 255, 255, 0.4); }
+
+.ot-tag {
+    display: inline-block;
+    font-size: 0.55rem;
+    color: #f59e0b;
+    margin-left: 2px;
+}
+
+.summary-week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.summary-week-label {
+    font-size: 1rem;
+    font-weight: 600;
+    min-width: 200px;
+    text-align: center;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.summary-stat {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.summary-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.summary-stat-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 4px;
+}
+
+.summary-table-container {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    overflow-x: auto;
+}
+
+.summary-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.summary-table-container th,
+.summary-table-container td {
+    padding: 12px 14px;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+.summary-table-container th {
+    background: rgba(255, 255, 255, 0.04);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+}
+
+.summary-table-container td { border-top: 1px solid rgba(255, 255, 255, 0.04); }
+.summary-table-container td:first-child { text-align: left; font-weight: 600; }
+.summary-table-container tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+.toast-container {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 12px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toast-success { border-left: 3px solid #22c55e; }
+.toast-error { border-left: 3px solid #ef4444; }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(100px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100px); }
+}
+
+@media (max-width: 768px) {
+    .container { padding: 20px 12px; }
+    header h1 { font-size: 1.75rem; }
+    .week-nav { gap: 8px; }
+    .week-legend { gap: 12px; }
+    .legend-item { font-size: 0.7rem; }
+    .section-header { flex-direction: column; align-items: flex-start; }
+    .summary-stats { grid-template-columns: repeat(2, 1fr); }
+}
+    </style>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    <div class="container">
+        <header>
+            <h1>Haftalik Vardiya Takip</h1>
+            <p class="subtitle">Haftalik vardiya planlama ve yonetim sistemi</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="weekly">
+                <span class="tab-icon">&#128197;</span>
+                Haftalik Plan
+            </button>
+            <button class="tab" data-tab="employees">
+                <span class="tab-icon">&#128101;</span>
+                Calisanlar
+            </button>
+            <button class="tab" data-tab="summary">
+                <span class="tab-icon">&#128202;</span>
+                Haftalik Ozet
+            </button>
+        </nav>
+
+        <div class="tab-content" id="tab-weekly">
+            <div class="week-nav">
+                <button class="btn btn-secondary btn-icon" id="prev-week">&#9664;</button>
+                <div class="week-info">
+                    <h2 id="week-title">Bu Hafta</h2>
+                    <span id="week-dates"></span>
+                </div>
+                <button class="btn btn-secondary btn-icon" id="next-week">&#9654;</button>
+                <button class="btn btn-primary" id="btn-today">Bugun</button>
+            </div>
+
+            <div class="week-legend">
+                <div class="legend-item">
+                    <span class="legend-color legend-sabah"></span>
+                    <span>Sabah (08-16)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color legend-aksam"></span>
+                    <span>Aksam (16-00)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color legend-ogle"></span>
+                    <span>Ogle (12-20)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color legend-izin"></span>
+                    <span>Haftalik Izin</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color legend-ozel"></span>
+                    <span>Ozel</span>
+                </div>
+            </div>
+
+            <div class="week-grid-container">
+                <div class="week-grid" id="week-grid"></div>
+            </div>
+        </div>
+
+        <div class="tab-content hidden" id="tab-employees">
+            <div class="section-header">
+                <h2>Calisan Yonetimi</h2>
+                <button class="btn btn-primary" id="btn-add-employee">
+                    <span>+</span> Yeni Calisan
+                </button>
+            </div>
+            <div class="employee-list" id="employee-list">
+                <p class="empty-state">Henuz calisan eklenmemis</p>
+            </div>
+        </div>
+
+        <div class="tab-content hidden" id="tab-summary">
+            <div class="section-header">
+                <h2>Haftalik Ozet</h2>
+                <button class="btn btn-secondary" id="btn-export">
+                    <span>&#128229;</span> CSV Indir
+                </button>
+            </div>
+
+            <div class="summary-week-nav">
+                <button class="btn btn-secondary btn-icon" id="summary-prev-week">&#9664;</button>
+                <span id="summary-week-title" class="summary-week-label"></span>
+                <button class="btn btn-secondary btn-icon" id="summary-next-week">&#9654;</button>
+            </div>
+
+            <div class="summary-stats" id="summary-stats"></div>
+            <div class="summary-table-container" id="summary-table"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">Vardiya Ata</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+const DB_KEY = 'weeklyShiftTracker';
+let data = loadData();
+let currentTab = 'weekly';
+let currentWeekStart = getMonday(new Date());
+let editingShiftId = null;
+let editingEmployeeId = null;
+
+const DAYS = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
+const DAYS_SHORT = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+const SHIFT_TYPES = {
+    sabah: { label: 'Sabah', start: '08:00', end: '16:00', hours: 8 },
+    aksam: { label: 'Aksam', start: '16:00', end: '00:00', hours: 8 },
+    ogle: { label: 'Ogle', start: '12:00', end: '20:00', hours: 8 },
+    izin: { label: 'Izin', start: '', end: '', hours: 0 },
+};
+
+function loadData() {
+    const saved = localStorage.getItem(DB_KEY);
+    if (saved) return JSON.parse(saved);
+    return { employees: [], shifts: [] };
+}
+
+function saveData() {
+    localStorage.setItem(DB_KEY, JSON.stringify(data));
+}
+
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function toLocalDateString(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function fromLocalDateString(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function getMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    return toLocalDateString(d);
+}
+
+function getWeekDates(mondayStr) {
+    const dates = [];
+    const monday = fromLocalDateString(mondayStr);
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(d.getDate() + i);
+        dates.push(toLocalDateString(d));
+    }
+    return dates;
+}
+
+function getToday() { return toLocalDateString(new Date()); }
+
+function formatDate(dateStr) {
+    const d = fromLocalDateString(dateStr);
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+}
+
+function formatDateFull(dateStr) {
+    const d = fromLocalDateString(dateStr);
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function calcHours(start, end) {
+    if (!start || !end) return 0;
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let totalMin = (eh * 60 + em) - (sh * 60 + sm);
+    if (totalMin < 0) totalMin += 24 * 60;
+    return totalMin / 60;
+}
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `${type === 'success' ? '&#9989;' : '&#10060;'} ${message}`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function openModal(title, content) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = content;
+    document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').classList.add('hidden');
+    editingShiftId = null;
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById(`tab-${tab}`).classList.remove('hidden');
+    renderCurrentTab();
+}
+
+function renderCurrentTab() {
+    switch (currentTab) {
+        case 'weekly': renderWeekly(); break;
+        case 'employees': renderEmployees(); break;
+        case 'summary': renderSummary(); break;
+    }
+}
+
+function getShiftBadgeClass(type) {
+    if (type === 'sabah') return 'sabah';
+    if (type === 'aksam') return 'aksam';
+    if (type === 'ogle') return 'ogle';
+    if (type === 'izin') return 'izin';
+    if (type === 'ozel') return 'ozel';
+    return 'ozel';
+}
+
+function renderWeekly() {
+    const dates = getWeekDates(currentWeekStart);
+    const today = getToday();
+    const weekEnd = dates[6];
+    document.getElementById('week-dates').textContent = `${formatDateFull(currentWeekStart)} - ${formatDateFull(weekEnd)}`;
+
+    const grid = document.getElementById('week-grid');
+
+    if (data.employees.length === 0) {
+        grid.innerHTML = '<p class="empty-state">Vardiya planlamak icin once calisan ekleyin</p>';
+        return;
+    }
+
+    let html = '<div class="week-grid-header">';
+    html += '<div class="grid-cell">Calisan</div>';
+    dates.forEach((date, i) => {
+        const isToday = date === today;
+        const d = fromLocalDateString(date);
+        html += `<div class="grid-cell ${isToday ? 'today' : ''}">
+            <span class="day-name">${DAYS_SHORT[i]}</span>
+            <span class="day-num">${d.getDate()}</span>
+        </div>`;
+    });
+    html += '</div>';
+
+    data.employees.forEach(emp => {
+        const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        html += '<div class="grid-row">';
+        html += `<div class="grid-cell employee-name-cell">
+            <div class="emp-avatar">${initials}</div>
+            <span>${emp.name}</span>
+        </div>`;
+
+        dates.forEach(date => {
+            const isToday = date === today;
+            const shifts = data.shifts.filter(s => s.employeeId === emp.id && s.date === date);
+
+            html += `<div class="grid-cell ${isToday ? 'today-col' : ''}">`;
+
+            shifts.forEach(shift => {
+                const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
+                const badgeClass = getShiftBadgeClass(shift.type);
+                const otBadge = shift.overtime > 0 ? `<span class="ot-tag">+${shift.overtime.toFixed(1)}</span>` : '';
+                const badgeText = shift.type === 'izin' ? typeInfo.label : `${typeInfo.label} ${shift.start}-${shift.end}`;
+                html += `<div class="shift-badge ${badgeClass}" onclick="editShift('${shift.id}')" title="${shift.type === 'izin' ? typeInfo.label : typeInfo.label + ': ' + shift.start + ' - ' + shift.end}">
+                    ${badgeText}${otBadge}
+                </div>`;
+            });
+
+            html += `<div class="add-shift-cell" onclick="showShiftForm('${emp.id}', '${date}')">+</div>`;
+            html += '</div>';
+        });
+
+        html += '</div>';
+    });
+
+    grid.innerHTML = html;
+    grid.style.gridTemplateColumns = `120px repeat(7, 1fr)`;
+}
+
+function renderEmployees() {
+    const container = document.getElementById('employee-list');
+    if (data.employees.length === 0) {
+        container.innerHTML = '<p class="empty-state">Henuz calisan eklenmemis</p>';
+        return;
+    }
+
+    const weekDates = getWeekDates(currentWeekStart);
+    container.innerHTML = data.employees.map(emp => {
+        const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const weekShifts = data.shifts.filter(s => s.employeeId === emp.id && weekDates.includes(s.date));
+        const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+        const totalOvertime = weekShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
+
+        return `
+            <div class="employee-card">
+                <div class="employee-info">
+                    <div class="employee-avatar">${initials}</div>
+                    <div>
+                        <div class="employee-name">${emp.name}</div>
+                        <div class="employee-role">${emp.role || 'Calisan'} - Bu hafta ${totalHours}s${totalOvertime > 0 ? ` (<span style="color:#f59e0b">+${totalOvertime.toFixed(1)} fazla</span>)` : ''}</div>
+                    </div>
+                </div>
+                <div class="employee-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="editEmployee('${emp.id}')">Duzenle</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${emp.id}')">Sil</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSummary() {
+    const dates = getWeekDates(currentWeekStart);
+    const weekEnd = dates[6];
+    document.getElementById('summary-week-title').textContent = `${formatDate(currentWeekStart)} - ${formatDate(weekEnd)}`;
+
+    const weekShifts = data.shifts.filter(s => dates.includes(s.date));
+    const totalShifts = weekShifts.length;
+    const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+    const totalOvertime = weekShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
+
+    const sabahCount = weekShifts.filter(s => s.type === 'sabah').length;
+    const aksamCount = weekShifts.filter(s => s.type === 'aksam').length;
+    const ogleCount = weekShifts.filter(s => s.type === 'ogle').length;
+    const ozelCount = weekShifts.filter(s => s.type === 'ozel').length;
+    const izinCount = weekShifts.filter(s => s.type === 'izin').length;
+
+    document.getElementById('summary-stats').innerHTML = `
+        <div class="summary-stat">
+            <div class="summary-stat-value">${totalShifts}</div>
+            <div class="summary-stat-label">Toplam Vardiya</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value">${totalHours}</div>
+            <div class="summary-stat-label">Toplam Saat</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value">${totalOvertime > 0 ? '+' : ''}${totalOvertime.toFixed(1)}</div>
+            <div class="summary-stat-label">Fazla Mesai</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value">${sabahCount}</div>
+            <div class="summary-stat-label">Sabah</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value">${aksamCount}</div>
+            <div class="summary-stat-label">Aksam</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value">${ogleCount}</div>
+            <div class="summary-stat-label">Ogle</div>
+        </div>
+        <div class="summary-stat">
+            <div class="summary-stat-value">${izinCount}</div>
+            <div class="summary-stat-label">Izin</div>
+        </div>
+    `;
+
+    if (data.employees.length === 0) {
+        document.getElementById('summary-table').innerHTML = '<p class="empty-state">Calisan yok</p>';
+        return;
+    }
+
+    let tableHtml = '<table><thead><tr>';
+    tableHtml += '<th>Calisan</th>';
+    dates.forEach((date, i) => {
+        const d = fromLocalDateString(date);
+        tableHtml += `<th>${DAYS_SHORT[i]}<br>${d.getDate()}</th>`;
+    });
+    tableHtml += '<th>Saat</th><th>Fazla</th>';
+    tableHtml += '</tr></thead><tbody>';
+
+    data.employees.forEach(emp => {
+        tableHtml += '<tr>';
+        tableHtml += `<td>${emp.name}</td>`;
+
+        let empTotal = 0;
+        let empOvertime = 0;
+        dates.forEach(date => {
+            const shift = data.shifts.find(s => s.employeeId === emp.id && s.date === date);
+            if (shift) {
+                const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
+                const badgeClass = getShiftBadgeClass(shift.type);
+                empTotal += shift.actualHours || shift.hours || 0;
+                empOvertime += shift.overtime || 0;
+                const badgeText = shift.type === 'izin' ? typeInfo.label : `${typeInfo.label} ${shift.start}-${shift.end}`;
+                tableHtml += `<td><span class="shift-badge ${badgeClass}" style="margin:0;font-size:0.6rem;">${badgeText}</span></td>`;
+            } else {
+                tableHtml += '<td>-</td>';
+            }
+        });
+
+        tableHtml += `<td><strong>${empTotal}s</strong></td>`;
+        tableHtml += `<td style="color:${empOvertime > 0 ? '#f59e0b' : 'inherit'}">${empOvertime !== 0 ? (empOvertime > 0 ? '+' : '') + empOvertime.toFixed(1) : '-'}</td>`;
+        tableHtml += '</tr>';
+    });
+
+    tableHtml += '</tbody></table>';
+    document.getElementById('summary-table').innerHTML = tableHtml;
+}
+
+function showEmployeeForm(employee = null) {
+    editingEmployeeId = employee ? employee.id : null;
+    const title = employee ? 'Calisan Duzenle' : 'Yeni Calisan';
+    const content = `
+        <div class="form-group">
+            <label>Ad Soyad</label>
+            <input type="text" id="emp-name" value="${employee ? employee.name : ''}" placeholder="Ad Soyad girin">
+        </div>
+        <div class="form-group">
+            <label>Pozisyon</label>
+            <input type="text" id="emp-role" value="${employee ? employee.role || '' : ''}" placeholder="Pozisyon girin">
+        </div>
+        <div class="form-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">Iptal</button>
+            <button class="btn btn-primary" onclick="saveEmployee()">Kaydet</button>
+        </div>
+    `;
+    openModal(title, content);
+}
+
+function saveEmployee() {
+    const name = document.getElementById('emp-name').value.trim();
+    const role = document.getElementById('emp-role').value.trim();
+
+    if (!name) {
+        showToast('Lutfen ad soyad girin', 'error');
+        return;
+    }
+
+    if (editingEmployeeId) {
+        const emp = data.employees.find(e => e.id === editingEmployeeId);
+        if (emp) {
+            emp.name = name;
+            emp.role = role;
+        }
+        showToast('Calisan guncellendi');
+    } else {
+        data.employees.push({
+            id: generateId(),
+            name,
+            role,
+            createdAt: new Date().toISOString()
+        });
+        showToast('Calisan eklendi');
+    }
+
+    saveData();
+    closeModal();
+    renderCurrentTab();
+}
+
+function editEmployee(id) {
+    const emp = data.employees.find(e => e.id === id);
+    if (emp) showEmployeeForm(emp);
+}
+
+function deleteEmployee(id) {
+    if (!confirm('Bu calisani silmek istediginize emin misiniz? Iliskili vardiyalar da silinecektir.')) return;
+
+    data.employees = data.employees.filter(e => e.id !== id);
+    data.shifts = data.shifts.filter(s => s.employeeId !== id);
+    saveData();
+    showToast('Calisan silindi');
+    renderCurrentTab();
+}
+
+function showShiftForm(employeeId, date, shift = null) {
+    editingShiftId = shift ? shift.id : null;
+    const title = shift ? 'Vardiya Duzenle' : 'Vardiya Ata';
+
+    const emp = data.employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    const existing = shift || data.shifts.find(s => s.employeeId === employeeId && s.date === date);
+    const curType = existing ? existing.type : '';
+    const curStart = existing ? existing.start : '08:00';
+    const curEnd = existing ? existing.end : '16:00';
+    const curNote = existing ? existing.note || '' : '';
+    const curActualStart = existing ? existing.actualStart || '' : '';
+    const curActualEnd = existing ? existing.actualEnd || '' : '';
+    const curOvertime = existing ? existing.overtime || 0 : 0;
+    const hasActual = existing && (existing.actualStart || existing.actualEnd);
+
+    const content = `
+        <div class="shift-type-grid">
+            <button class="shift-type-btn sabah ${curType === 'sabah' ? 'active' : ''}" onclick="selectShiftType('sabah')">
+                <span class="shift-type-label">Sabah</span>
+                <span class="shift-type-time">08:00 - 16:00</span>
+            </button>
+            <button class="shift-type-btn aksam ${curType === 'aksam' ? 'active' : ''}" onclick="selectShiftType('aksam')">
+                <span class="shift-type-label">Aksam</span>
+                <span class="shift-type-time">16:00 - 00:00</span>
+            </button>
+            <button class="shift-type-btn ogle ${curType === 'ogle' ? 'active' : ''}" onclick="selectShiftType('ogle')">
+                <span class="shift-type-label">Ogle</span>
+                <span class="shift-type-time">12:00 - 20:00</span>
+            </button>
+            <button class="shift-type-btn izin ${curType === 'izin' ? 'active' : ''}" onclick="selectShiftType('izin')">
+                <span class="shift-type-label">Haftalik Izin</span>
+                <span class="shift-type-time">Tum gun</span>
+            </button>
+            <button class="shift-type-btn ozel ${curType === 'ozel' || (!curType || !SHIFT_TYPES[curType]) ? 'active' : ''}" onclick="selectShiftType('ozel')">
+                <span class="shift-type-label">Ozel</span>
+                <span class="shift-type-time">Saat sec</span>
+            </button>
+        </div>
+
+        <div class="form-row" id="custom-time-row" style="${curType && SHIFT_TYPES[curType] ? 'display:none' : ''}">
+            <div class="form-group">
+                <label>Baslangic</label>
+                <input type="time" id="shift-start" value="${curStart}" onchange="onTimeChange()">
+            </div>
+            <div class="form-group">
+                <label>Bitis</label>
+                <input type="time" id="shift-end" value="${curEnd}" onchange="onTimeChange()">
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top:10px;">
+            <label>Not (opsiyonel)</label>
+            <input type="text" id="shift-note" value="${curNote}" placeholder="Not ekle...">
+        </div>
+
+        <div class="divider" onclick="toggleOvertimeSection()" style="cursor:pointer;">
+            <span>Fazla Mesai &#9662;</span>
+        </div>
+        <div id="overtime-section" style="display:none;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Gelis</label>
+                    <input type="time" id="shift-actual-start" value="${curActualStart}" onchange="onTimeChange()">
+                </div>
+                <div class="form-group">
+                    <label>Cikis</label>
+                    <input type="time" id="shift-actual-end" value="${curActualEnd}" onchange="onTimeChange()">
+                </div>
+            </div>
+            <div class="overtime-display">
+                <div class="overtime-item">
+                    <span>Planlanan:</span>
+                    <strong id="planned-hours">${curType && SHIFT_TYPES[curType] ? SHIFT_TYPES[curType].hours : calcHours(curStart, curEnd).toFixed(1)}s</strong>
+                </div>
+                <div class="overtime-item">
+                    <span>Gercek:</span>
+                    <strong id="actual-hours">${hasActual ? calcHours(curActualStart, curActualEnd).toFixed(1) : '-'}s</strong>
+                </div>
+                <div class="overtime-item highlight">
+                    <span>Fazla:</span>
+                    <strong id="overtime-hours" style="color:${curOvertime > 0 ? '#f59e0b' : curOvertime < 0 ? '#22c55e' : '#fff'}">${curOvertime !== 0 ? (curOvertime > 0 ? '+' : '') + curOvertime.toFixed(1) : '-'}s</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            ${shift ? `<button class="btn btn-danger" onclick="deleteShift('${shift.id}')">Sil</button>` : ''}
+            <button class="btn btn-secondary" onclick="closeModal()">Iptal</button>
+            <button class="btn btn-primary" onclick="saveShift('${employeeId}', '${date}')">Kaydet</button>
+        </div>
+    `;
+    openModal(title, content);
+}
+
+let selectedShiftType = '';
+
+function selectShiftType(type) {
+    selectedShiftType = type;
+    document.querySelectorAll('.shift-type-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.shift-type-btn.${type}`).classList.add('active');
+
+    const customRow = document.getElementById('custom-time-row');
+    if (type === 'ozel') {
+        customRow.style.display = 'grid';
+    } else if (type === 'izin') {
+        customRow.style.display = 'none';
+        document.getElementById('shift-start').value = '';
+        document.getElementById('shift-end').value = '';
+    } else {
+        customRow.style.display = 'none';
+        document.getElementById('shift-start').value = SHIFT_TYPES[type].start;
+        document.getElementById('shift-end').value = SHIFT_TYPES[type].end;
+    }
+    onTimeChange();
+}
+
+function toggleOvertimeSection() {
+    const section = document.getElementById('overtime-section');
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+}
+
+function onTimeChange() {
+    const start = document.getElementById('shift-start').value;
+    const end = document.getElementById('shift-end').value;
+    const actualStart = document.getElementById('shift-actual-start').value;
+    const actualEnd = document.getElementById('shift-actual-end').value;
+    const type = selectedShiftType;
+
+    const planned = type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? calcHours(start, end) : 0);
+    const hasActual = actualStart && actualEnd;
+    const actual = hasActual ? calcHours(actualStart, actualEnd) : planned;
+    const overtime = hasActual ? actual - planned : 0;
+
+    const plannedEl = document.getElementById('planned-hours');
+    const actualEl = document.getElementById('actual-hours');
+    const otEl = document.getElementById('overtime-hours');
+    if (plannedEl) plannedEl.textContent = planned.toFixed(1) + 's';
+    if (actualEl) actualEl.textContent = hasActual ? actual.toFixed(1) + 's' : '-';
+    if (otEl) {
+        if (hasActual) {
+            otEl.textContent = (overtime > 0 ? '+' : '') + overtime.toFixed(1) + 's';
+            otEl.style.color = overtime > 0 ? '#f59e0b' : overtime < 0 ? '#22c55e' : '#fff';
+        } else {
+            otEl.textContent = '-';
+            otEl.style.color = '#fff';
+        }
+    }
+}
+
+function saveShift(employeeId, date) {
+    const type = selectedShiftType || 'ozel';
+    const start = document.getElementById('shift-start').value;
+    const end = document.getElementById('shift-end').value;
+    const note = document.getElementById('shift-note').value.trim();
+    const actualStart = document.getElementById('shift-actual-start').value;
+    const actualEnd = document.getElementById('shift-actual-end').value;
+
+    if (type !== 'izin' && (!start || !end)) {
+        showToast('Lutfen baslangic ve bitis saati girin', 'error');
+        return;
+    }
+
+    const plannedHours = type === 'izin' ? 0 : (type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? calcHours(start, end) : 0));
+    const hasActual = actualStart && actualEnd;
+    const actualHours = type === 'izin' ? 0 : (hasActual ? calcHours(actualStart, actualEnd) : plannedHours);
+    const overtime = type === 'izin' ? 0 : (hasActual ? actualHours - plannedHours : 0);
+
+    const existing = data.shifts.filter(s => s.employeeId === employeeId && s.date === date);
+
+    if (existing.length > 0 && !editingShiftId) {
+        if (!confirm('Bu tarih icin zaten vardiya var. Degistirmek istiyor musunuz?')) return;
+        data.shifts = data.shifts.filter(s => !(s.employeeId === employeeId && s.date === date));
+    }
+
+    const shiftData = {
+        employeeId,
+        date,
+        type: type || 'ozel',
+        start,
+        end,
+        hours: plannedHours,
+        actualStart: actualStart || start,
+        actualEnd: actualEnd || end,
+        actualHours,
+        overtime,
+        note,
+    };
+
+    if (editingShiftId) {
+        const shift = data.shifts.find(s => s.id === editingShiftId);
+        if (shift) {
+            Object.assign(shift, shiftData);
+        }
+        showToast('Vardiya guncellendi');
+    } else {
+        data.shifts.push({
+            ...shiftData,
+            id: generateId(),
+            createdAt: new Date().toISOString()
+        });
+        showToast('Vardiya eklendi');
+    }
+
+    saveData();
+    closeModal();
+    renderCurrentTab();
+}
+
+function editShift(id) {
+    const shift = data.shifts.find(s => s.id === id);
+    if (shift) {
+        selectedShiftType = shift.type;
+        showShiftForm(shift.employeeId, shift.date, shift);
+    }
+}
+
+function deleteShift(id) {
+    data.shifts = data.shifts.filter(s => s.id !== id);
+    saveData();
+    closeModal();
+    showToast('Vardiya silindi');
+    renderCurrentTab();
+}
+
+function exportToCSV() {
+    const dates = getWeekDates(currentWeekStart);
+    const weekShifts = data.shifts.filter(s => dates.includes(s.date));
+
+    if (weekShifts.length === 0) {
+        showToast('Disa aktarilacak vardiya yok', 'error');
+        return;
+    }
+
+    let csv = 'Calisan,Tarih,Tip,Baslangic,Bitis,Planlanan,Gelis,Cikis,Gercek,Fazla Mesai,Not\n';
+    weekShifts.forEach(s => {
+        const emp = data.employees.find(e => e.id === s.employeeId);
+        const typeInfo = SHIFT_TYPES[s.type] || { label: s.type };
+        csv += `${emp ? emp.name : 'Bilinmeyen'},${s.date},${typeInfo.label},${s.start},${s.end},${s.hours},${s.actualStart},${s.actualEnd},${s.actualHours},${s.overtime},${s.note || ''}\n`;
+    });
+
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `haftalik-vardiya-${currentWeekStart}.csv`;
+    link.click();
+    showToast('Haftalik plan CSV olarak indirildi');
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal();
+});
+
+document.getElementById('btn-add-employee').addEventListener('click', () => showEmployeeForm());
+document.getElementById('btn-export').addEventListener('click', exportToCSV);
+
+document.getElementById('prev-week').addEventListener('click', () => {
+    const d = fromLocalDateString(currentWeekStart);
+    d.setDate(d.getDate() - 7);
+    currentWeekStart = toLocalDateString(d);
+    renderCurrentTab();
+});
+
+document.getElementById('next-week').addEventListener('click', () => {
+    const d = fromLocalDateString(currentWeekStart);
+    d.setDate(d.getDate() + 7);
+    currentWeekStart = toLocalDateString(d);
+    renderCurrentTab();
+});
+
+document.getElementById('btn-today').addEventListener('click', () => {
+    currentWeekStart = getMonday(new Date());
+    renderCurrentTab();
+});
+
+document.getElementById('summary-prev-week').addEventListener('click', () => {
+    const d = fromLocalDateString(currentWeekStart);
+    d.setDate(d.getDate() - 7);
+    currentWeekStart = toLocalDateString(d);
+    renderCurrentTab();
+});
+
+document.getElementById('summary-next-week').addEventListener('click', () => {
+    const d = fromLocalDateString(currentWeekStart);
+    d.setDate(d.getDate() + 7);
+    currentWeekStart = toLocalDateString(d);
+    renderCurrentTab();
+});
+
+renderWeekly();
+    </script>
+</body>
+</html>

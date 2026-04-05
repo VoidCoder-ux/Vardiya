@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Haftalik Vardiya Takip</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#a78bfa">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vardiya">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -789,6 +795,78 @@ header h1 {
     .summary-stat-value { background: none; -webkit-text-fill-color: #333; color: #333; }
     header h1 { background: none; -webkit-text-fill-color: #000; color: #000; }
 }
+
+.install-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #1a1a2e 0%, #12121a 100%);
+    border-top: 1px solid rgba(167, 139, 250, 0.3);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    z-index: 300;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+    animation: slideUp 0.4s ease;
+}
+
+.install-banner.hidden { display: none; }
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.install-banner-text {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.install-banner-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.25), rgba(244, 114, 182, 0.25));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.install-banner-info h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.install-banner-info p {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.install-banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.install-banner-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.install-banner-close:hover { color: #fff; }
     </style>
 </head>
 <body>
@@ -913,6 +991,20 @@ header h1 {
     </div>
 
     <div class="toast-container" id="toast-container"></div>
+
+    <div class="install-banner hidden" id="install-banner">
+        <div class="install-banner-text">
+            <div class="install-banner-icon">&#128197;</div>
+            <div class="install-banner-info">
+                <h4>Vardiya'yi Ana Ekrana Ekle</h4>
+                <p>Hizli erisim icin uygulamayi yukleyin</p>
+            </div>
+        </div>
+        <div class="install-banner-actions">
+            <button class="btn btn-primary btn-sm" id="install-btn">Yukle</button>
+            <button class="install-banner-close" id="install-dismiss">&times;</button>
+        </div>
+    </div>
 
     <script>
 const DB_KEY = 'weeklyShiftTracker';
@@ -1761,6 +1853,73 @@ document.addEventListener('keydown', (e) => {
 });
 
 renderWeekly();
+
+// --- PWA: Service Worker & Install Prompt ---
+let deferredInstallPrompt = null;
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const dismissed = localStorage.getItem('vardiya_install_dismissed');
+    if (!dismissed) {
+        document.getElementById('install-banner').classList.remove('hidden');
+    }
+});
+
+document.getElementById('install-btn').addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const result = await deferredInstallPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+        showToast('Uygulama ana ekrana eklendi!');
+    }
+    deferredInstallPrompt = null;
+    document.getElementById('install-banner').classList.add('hidden');
+});
+
+document.getElementById('install-dismiss').addEventListener('click', () => {
+    document.getElementById('install-banner').classList.add('hidden');
+    localStorage.setItem('vardiya_install_dismissed', Date.now().toString());
+});
+
+// iOS Safari: show manual instructions
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !navigator.standalone) {
+    const dismissed = localStorage.getItem('vardiya_install_dismissed');
+    if (!dismissed) {
+        setTimeout(() => {
+            const banner = document.getElementById('install-banner');
+            banner.classList.remove('hidden');
+            const btn = document.getElementById('install-btn');
+            btn.textContent = 'Nasil?';
+            btn.addEventListener('click', () => {
+                openModal('Ana Ekrana Ekle', `
+                    <div style="text-align:center;padding:10px 0;">
+                        <p style="font-size:2.5rem;margin-bottom:16px;">&#128241;</p>
+                        <p style="margin-bottom:16px;font-size:0.9rem;">Safari\'da asagidaki adimlari izleyin:</p>
+                        <div style="text-align:left;background:rgba(255,255,255,0.04);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.08);">
+                            <p style="margin-bottom:10px;font-size:0.85rem;"><strong>1.</strong> Alt bardaki <span style="font-size:1.1rem;">&#9757;</span> <strong>Paylas</strong> ikonuna dokunun</p>
+                            <p style="margin-bottom:10px;font-size:0.85rem;"><strong>2.</strong> Asagi kaydirinr ve <strong>"Ana Ekrana Ekle"</strong> secenegine dokunun</p>
+                            <p style="font-size:0.85rem;"><strong>3.</strong> Sag ustteki <strong>"Ekle"</strong> butonuna dokunun</p>
+                        </div>
+                    </div>
+                    <div class="form-actions" style="margin-top:16px;">
+                        <button class="btn btn-primary" onclick="closeModal()">Anladim</button>
+                    </div>
+                `);
+            }, { once: true });
+        }, 3000);
+    }
+}
+
+window.addEventListener('appinstalled', () => {
+    document.getElementById('install-banner').classList.add('hidden');
+    deferredInstallPrompt = null;
+    showToast('Vardiya basariyla yuklendi!');
+});
     </script>
 </body>
 </html>

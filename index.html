@@ -324,22 +324,10 @@ header h1 {
     border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
-.shift-badge.gunluk {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2));
-    color: #22c55e;
-    border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
 .shift-badge.ozel {
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.2));
     color: #c084fc;
     border: 1px solid rgba(168, 85, 247, 0.3);
-}
-
-.shift-badge.tatil {
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .shift-badge.izin {
@@ -1015,7 +1003,12 @@ function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `${type === 'success' ? '&#9989;' : '&#10060;'} ${message}`;
+    const icon = document.createElement('span');
+    icon.textContent = type === 'success' ? '\u2705' : '\u274C';
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(icon);
+    toast.appendChild(text);
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
@@ -1029,6 +1022,8 @@ function openModal(title, content) {
 function closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
     editingShiftId = null;
+    editingEmployeeId = null;
+    selectedShiftType = '';
 }
 
 function switchTab(tab) {
@@ -1063,6 +1058,18 @@ function renderWeekly() {
     const today = getToday();
     const weekEnd = dates[6];
     document.getElementById('week-dates').textContent = `${formatDateFull(currentWeekStart)} - ${formatDateFull(weekEnd)}`;
+
+    const todayMonday = getMonday(new Date());
+    const weekTitleEl = document.getElementById('week-title');
+    if (currentWeekStart === todayMonday) {
+        weekTitleEl.textContent = 'Bu Hafta';
+    } else if (currentWeekStart < todayMonday) {
+        const weeksAgo = Math.round((fromLocalDateString(todayMonday) - fromLocalDateString(currentWeekStart)) / (7 * 86400000));
+        weekTitleEl.textContent = weeksAgo === 1 ? 'Gecen Hafta' : `${weeksAgo} Hafta Once`;
+    } else {
+        const weeksAhead = Math.round((fromLocalDateString(currentWeekStart) - fromLocalDateString(todayMonday)) / (7 * 86400000));
+        weekTitleEl.textContent = weeksAhead === 1 ? 'Gelecek Hafta' : `${weeksAhead} Hafta Sonra`;
+    }
 
     const grid = document.getElementById('week-grid');
 
@@ -1215,6 +1222,10 @@ function renderSummary() {
             <div class="summary-stat-value">${izinCount}</div>
             <div class="summary-stat-label">Izin</div>
         </div>
+        ${ozelCount > 0 ? `<div class="summary-stat">
+            <div class="summary-stat-value">${ozelCount}</div>
+            <div class="summary-stat-label">Ozel</div>
+        </div>` : ''}
     `;
 
     if (data.employees.length === 0) {
@@ -1238,14 +1249,19 @@ function renderSummary() {
         let empTotal = 0;
         let empOvertime = 0;
         dates.forEach(date => {
-            const shift = data.shifts.find(s => s.employeeId === emp.id && s.date === date);
-            if (shift) {
-                const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
-                const badgeClass = getShiftBadgeClass(shift.type);
-                empTotal += shift.actualHours || shift.hours || 0;
-                empOvertime += shift.overtime || 0;
-                const badgeText = shift.type === 'izin' ? typeInfo.label : `${typeInfo.label} ${shift.start}-${shift.end}`;
-                tableHtml += `<td><span class="shift-badge ${badgeClass}" style="margin:0;font-size:0.6rem;">${badgeText}</span></td>`;
+            const dayShifts = data.shifts.filter(s => s.employeeId === emp.id && s.date === date);
+            if (dayShifts.length > 0) {
+                let cellHtml = '<td>';
+                dayShifts.forEach(shift => {
+                    const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
+                    const badgeClass = getShiftBadgeClass(shift.type);
+                    empTotal += shift.actualHours || shift.hours || 0;
+                    empOvertime += shift.overtime || 0;
+                    const badgeText = shift.type === 'izin' ? typeInfo.label : `${typeInfo.label} ${shift.start}-${shift.end}`;
+                    cellHtml += `<span class="shift-badge ${badgeClass}" style="margin:0 0 2px 0;font-size:0.6rem;">${badgeText}</span>`;
+                });
+                cellHtml += '</td>';
+                tableHtml += cellHtml;
             } else {
                 tableHtml += '<td>-</td>';
             }
@@ -1340,8 +1356,9 @@ function showShiftForm(employeeId, date, shift = null) {
     const emp = data.employees.find(e => e.id === employeeId);
     if (!emp) return;
 
-    const existing = shift || data.shifts.find(s => s.employeeId === employeeId && s.date === date);
-    const curType = existing ? existing.type : '';
+    const existing = shift ? shift : null;
+    const curType = existing ? existing.type : 'ozel';
+    selectedShiftType = curType;
     const curStart = existing ? existing.start : '08:00';
     const curEnd = existing ? existing.end : '16:00';
     const curNote = existing ? existing.note || '' : '';
@@ -1664,11 +1681,15 @@ function exportToCSV() {
         return;
     }
 
+    const csvEscape = (val) => {
+        const str = String(val ?? '');
+        return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str.replace(/"/g, '""')}"` : str;
+    };
     let csv = 'Calisan,Tarih,Tip,Baslangic,Bitis,Planlanan,Gelis,Cikis,Gercek,Fazla Mesai,Not\n';
     weekShifts.forEach(s => {
         const emp = data.employees.find(e => e.id === s.employeeId);
         const typeInfo = SHIFT_TYPES[s.type] || { label: s.type };
-        csv += `${emp ? emp.name : 'Bilinmeyen'},${s.date},${typeInfo.label},${s.start},${s.end},${s.hours},${s.actualStart},${s.actualEnd},${s.actualHours},${s.overtime},${s.note || ''}\n`;
+        csv += [emp ? emp.name : 'Bilinmeyen', s.date, typeInfo.label, s.start, s.end, s.hours, s.actualStart, s.actualEnd, s.actualHours, s.overtime, s.note || ''].map(csvEscape).join(',') + '\n';
     });
 
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });

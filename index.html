@@ -198,6 +198,7 @@ header h1 {
 .legend-aksam { background: linear-gradient(135deg, #f97316, #ea580c); }
 .legend-ogle { background: linear-gradient(135deg, #22c55e, #16a34a); }
 .legend-izin { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+.legend-gece { background: linear-gradient(135deg, #6366f1, #4f46e5); }
 .legend-ozel { background: linear-gradient(135deg, #a855f7, #8b5cf6); }
 
 .week-grid-container {
@@ -568,7 +569,7 @@ header h1 {
 
 .shift-type-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
     margin-bottom: 16px;
 }
@@ -603,6 +604,13 @@ header h1 {
 .shift-type-btn.aksam.active {
     background: rgba(249, 115, 22, 0.15);
     border-color: rgba(249, 115, 22, 0.4);
+}
+
+.shift-type-btn.gece { border-color: rgba(99, 102, 241, 0.2); }
+.shift-type-btn.gece:hover,
+.shift-type-btn.gece.active {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
 }
 
 .shift-type-btn.ogle { border-color: rgba(34, 197, 94, 0.2); }
@@ -750,13 +758,48 @@ header h1 {
 }
 
 @media (max-width: 768px) {
-    .container { padding: 20px 12px; }
-    header h1 { font-size: 1.75rem; }
-    .week-nav { gap: 8px; }
-    .week-legend { gap: 12px; }
-    .legend-item { font-size: 0.7rem; }
+    .container { padding: 16px 10px; }
+    header h1 { font-size: 1.5rem; }
+    .subtitle { font-size: 0.75rem; }
+    .week-nav { gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .week-legend { gap: 8px; }
+    .legend-item { font-size: 0.65rem; }
     .section-header { flex-direction: column; align-items: flex-start; }
     .summary-stats { grid-template-columns: repeat(2, 1fr); }
+    .tab { padding: 8px 8px; font-size: 0.75rem; }
+    .tab-icon { font-size: 0.85rem; }
+    .employee-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .employee-actions { width: 100%; justify-content: flex-end; }
+    .shift-type-grid { grid-template-columns: repeat(2, 1fr); }
+    .modal { max-width: 95vw; }
+    .modal-body { padding: 16px; }
+    .btn { padding: 7px 12px; font-size: 0.75rem; }
+}
+
+@media (max-width: 480px) {
+    header h1 { font-size: 1.25rem; }
+    .week-info h2 { font-size: 0.9rem; }
+    .week-info span { font-size: 0.7rem; }
+    .summary-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .summary-stat { padding: 12px; }
+    .summary-stat-value { font-size: 1.3rem; }
+    .shift-type-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media print {
+    body { background: #fff; color: #000; }
+    body::before, .noise-overlay { display: none; }
+    .tabs, .week-nav, .btn, .add-shift-cell, .employee-actions, .modal-overlay, .toast-container { display: none !important; }
+    .container { max-width: 100%; padding: 0; }
+    .tab-content { display: block !important; }
+    .tab-content.hidden { display: block !important; }
+    .week-grid-container, .summary-table-container { border-color: #ccc; }
+    .grid-cell { border-color: #ddd; }
+    .shift-badge { border-color: #999; color: #333 !important; background: #f0f0f0 !important; }
+    .employee-card { border-color: #ccc; background: #f9f9f9; }
+    .summary-stat { border-color: #ccc; background: #f9f9f9; }
+    .summary-stat-value { background: none; -webkit-text-fill-color: #333; color: #333; }
+    header h1 { background: none; -webkit-text-fill-color: #000; color: #000; }
 }
     </style>
 </head>
@@ -792,6 +835,8 @@ header h1 {
                 </div>
                 <button class="btn btn-secondary btn-icon" id="next-week">&#9654;</button>
                 <button class="btn btn-primary" id="btn-today">Bugun</button>
+                <button class="btn btn-secondary" id="btn-copy-week" title="Onceki haftanin vardiyalarini kopyala">&#128203; Kopyala</button>
+                <button class="btn btn-danger btn-sm" id="btn-clear-week" title="Bu haftanin tum vardiyalarini sil">&#128465; Temizle</button>
             </div>
 
             <div class="week-legend">
@@ -806,6 +851,10 @@ header h1 {
                 <div class="legend-item">
                     <span class="legend-color legend-ogle"></span>
                     <span>Ogle (12-20)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color legend-gece"></span>
+                    <span>Gece (00-08)</span>
                 </div>
                 <div class="legend-item">
                     <span class="legend-color legend-izin"></span>
@@ -825,9 +874,12 @@ header h1 {
         <div class="tab-content hidden" id="tab-employees">
             <div class="section-header">
                 <h2>Calisan Yonetimi</h2>
-                <button class="btn btn-primary" id="btn-add-employee">
-                    <span>+</span> Yeni Calisan
-                </button>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <input type="text" id="employee-search" placeholder="Calisan ara..." style="padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-family:inherit;font-size:0.85rem;outline:none;width:180px;" oninput="renderEmployees()">
+                    <button class="btn btn-primary" id="btn-add-employee">
+                        <span>+</span> Yeni Calisan
+                    </button>
+                </div>
             </div>
             <div class="employee-list" id="employee-list">
                 <p class="empty-state">Henuz calisan eklenmemis</p>
@@ -837,10 +889,19 @@ header h1 {
         <div class="tab-content hidden" id="tab-summary">
             <div class="section-header">
                 <h2>Haftalik Ozet</h2>
-                <button class="btn btn-secondary" id="btn-export">
-                    <span>&#128229;</span> CSV Indir
-                </button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-secondary" id="btn-export">
+                        <span>&#128229;</span> CSV Indir
+                    </button>
+                    <button class="btn btn-secondary" id="btn-backup">
+                        <span>&#128190;</span> Yedekle
+                    </button>
+                    <button class="btn btn-secondary" id="btn-restore">
+                        <span>&#128194;</span> Geri Yukle
+                    </button>
+                </div>
             </div>
+            <input type="file" id="restore-file-input" accept=".json" style="display:none">
 
             <div class="summary-week-nav">
                 <button class="btn btn-secondary btn-icon" id="summary-prev-week">&#9664;</button>
@@ -879,6 +940,7 @@ const DAYS_SHORT = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
 const SHIFT_TYPES = {
     sabah: { label: 'Sabah', start: '08:00', end: '16:00', hours: 8 },
     aksam: { label: 'Aksam', start: '16:00', end: '00:00', hours: 8 },
+    gece: { label: 'Gece', start: '00:00', end: '08:00', hours: 8 },
     ogle: { label: 'Ogle', start: '12:00', end: '20:00', hours: 8 },
     izin: { label: 'Izin', start: '', end: '', hours: 0 },
 };
@@ -989,6 +1051,7 @@ function renderCurrentTab() {
 function getShiftBadgeClass(type) {
     if (type === 'sabah') return 'sabah';
     if (type === 'aksam') return 'aksam';
+    if (type === 'gece') return 'gece';
     if (type === 'ogle') return 'ogle';
     if (type === 'izin') return 'izin';
     if (type === 'ozel') return 'ozel';
@@ -1004,7 +1067,7 @@ function renderWeekly() {
     const grid = document.getElementById('week-grid');
 
     if (data.employees.length === 0) {
-        grid.innerHTML = '<p class="empty-state">Vardiya planlamak icin once calisan ekleyin</p>';
+        grid.innerHTML = '<div class="empty-state"><p style="font-size:2.5rem;margin-bottom:12px;">&#128197;</p><p>Vardiya planlamak icin once calisan ekleyin</p><p style="font-size:0.8rem;margin-top:8px;color:rgba(255,255,255,0.2);">Calisanlar sekmesinden yeni calisan ekleyebilirsiniz</p></div>';
         return;
     }
 
@@ -1058,24 +1121,39 @@ function renderWeekly() {
 function renderEmployees() {
     const container = document.getElementById('employee-list');
     if (data.employees.length === 0) {
-        container.innerHTML = '<p class="empty-state">Henuz calisan eklenmemis</p>';
+        container.innerHTML = '<div class="empty-state"><p style="font-size:2rem;margin-bottom:12px;">&#128101;</p><p>Henuz calisan eklenmemis</p><p style="font-size:0.8rem;margin-top:8px;color:rgba(255,255,255,0.2);">Vardiya planlamaya baslamak icin "Yeni Calisan" butonuna basin</p></div>';
+        return;
+    }
+
+    const searchTerm = (document.getElementById('employee-search')?.value || '').toLowerCase().trim();
+    const filtered = searchTerm ? data.employees.filter(e => e.name.toLowerCase().includes(searchTerm) || (e.role || '').toLowerCase().includes(searchTerm)) : data.employees;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<p class="empty-state">Aramayla eslesen calisan bulunamadi</p>';
         return;
     }
 
     const weekDates = getWeekDates(currentWeekStart);
-    container.innerHTML = data.employees.map(emp => {
+    container.innerHTML = filtered.map(emp => {
         const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const weekShifts = data.shifts.filter(s => s.employeeId === emp.id && weekDates.includes(s.date));
         const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
         const totalOvertime = weekShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
 
+        const target = emp.weeklyTarget || 40;
+        const progress = Math.min((totalHours / target) * 100, 100);
+        const progressColor = totalHours > target ? '#f59e0b' : totalHours >= target * 0.8 ? '#22c55e' : '#a78bfa';
+
         return `
             <div class="employee-card">
                 <div class="employee-info">
                     <div class="employee-avatar">${initials}</div>
-                    <div>
+                    <div style="flex:1;">
                         <div class="employee-name">${emp.name}</div>
-                        <div class="employee-role">${emp.role || 'Calisan'} - Bu hafta ${totalHours}s${totalOvertime > 0 ? ` (<span style="color:#f59e0b">+${totalOvertime.toFixed(1)} fazla</span>)` : ''}</div>
+                        <div class="employee-role">${emp.role || 'Calisan'} - Bu hafta ${totalHours}/${target}s${totalOvertime > 0 ? ` (<span style="color:#f59e0b">+${totalOvertime.toFixed(1)} fazla</span>)` : ''}</div>
+                        <div style="margin-top:6px;background:rgba(255,255,255,0.08);border-radius:4px;height:4px;overflow:hidden;">
+                            <div style="width:${progress}%;height:100%;background:${progressColor};border-radius:4px;transition:width 0.3s;"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="employee-actions">
@@ -1100,6 +1178,7 @@ function renderSummary() {
     const sabahCount = weekShifts.filter(s => s.type === 'sabah').length;
     const aksamCount = weekShifts.filter(s => s.type === 'aksam').length;
     const ogleCount = weekShifts.filter(s => s.type === 'ogle').length;
+    const geceCount = weekShifts.filter(s => s.type === 'gece').length;
     const ozelCount = weekShifts.filter(s => s.type === 'ozel').length;
     const izinCount = weekShifts.filter(s => s.type === 'izin').length;
 
@@ -1125,6 +1204,10 @@ function renderSummary() {
             <div class="summary-stat-label">Aksam</div>
         </div>
         <div class="summary-stat">
+            <div class="summary-stat-value">${geceCount}</div>
+            <div class="summary-stat-label">Gece</div>
+        </div>
+        <div class="summary-stat">
             <div class="summary-stat-value">${ogleCount}</div>
             <div class="summary-stat-label">Ogle</div>
         </div>
@@ -1135,7 +1218,7 @@ function renderSummary() {
     `;
 
     if (data.employees.length === 0) {
-        document.getElementById('summary-table').innerHTML = '<p class="empty-state">Calisan yok</p>';
+        document.getElementById('summary-table').innerHTML = '<div class="empty-state"><p style="font-size:2rem;margin-bottom:12px;">&#128202;</p><p>Henuz veri yok</p><p style="font-size:0.8rem;margin-top:8px;color:rgba(255,255,255,0.2);">Calisan ve vardiya ekledikten sonra ozet burada gorunecek</p></div>';
         return;
     }
 
@@ -1189,6 +1272,10 @@ function showEmployeeForm(employee = null) {
             <label>Pozisyon</label>
             <input type="text" id="emp-role" value="${employee ? employee.role || '' : ''}" placeholder="Pozisyon girin">
         </div>
+        <div class="form-group">
+            <label>Haftalik Hedef Saat</label>
+            <input type="number" id="emp-weekly-target" value="${employee ? employee.weeklyTarget || 40 : 40}" min="0" max="168" placeholder="40">
+        </div>
         <div class="form-actions">
             <button class="btn btn-secondary" onclick="closeModal()">Iptal</button>
             <button class="btn btn-primary" onclick="saveEmployee()">Kaydet</button>
@@ -1200,6 +1287,7 @@ function showEmployeeForm(employee = null) {
 function saveEmployee() {
     const name = document.getElementById('emp-name').value.trim();
     const role = document.getElementById('emp-role').value.trim();
+    const weeklyTarget = parseInt(document.getElementById('emp-weekly-target').value) || 40;
 
     if (!name) {
         showToast('Lutfen ad soyad girin', 'error');
@@ -1211,6 +1299,7 @@ function saveEmployee() {
         if (emp) {
             emp.name = name;
             emp.role = role;
+            emp.weeklyTarget = weeklyTarget;
         }
         showToast('Calisan guncellendi');
     } else {
@@ -1218,6 +1307,7 @@ function saveEmployee() {
             id: generateId(),
             name,
             role,
+            weeklyTarget,
             createdAt: new Date().toISOString()
         });
         showToast('Calisan eklendi');
@@ -1269,6 +1359,10 @@ function showShiftForm(employeeId, date, shift = null) {
             <button class="shift-type-btn aksam ${curType === 'aksam' ? 'active' : ''}" onclick="selectShiftType('aksam')">
                 <span class="shift-type-label">Aksam</span>
                 <span class="shift-type-time">16:00 - 00:00</span>
+            </button>
+            <button class="shift-type-btn gece ${curType === 'gece' ? 'active' : ''}" onclick="selectShiftType('gece')">
+                <span class="shift-type-label">Gece</span>
+                <span class="shift-type-time">00:00 - 08:00</span>
             </button>
             <button class="shift-type-btn ogle ${curType === 'ogle' ? 'active' : ''}" onclick="selectShiftType('ogle')">
                 <span class="shift-type-label">Ogle</span>
@@ -1469,6 +1563,98 @@ function deleteShift(id) {
     renderCurrentTab();
 }
 
+function backupData() {
+    const backupObj = {
+        version: 1,
+        exportDate: new Date().toISOString(),
+        data: data
+    };
+    const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `vardiya-yedek-${toLocalDateString(new Date())}.json`;
+    link.click();
+    showToast('Veriler yedeklendi');
+}
+
+function restoreData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            const restored = parsed.data || parsed;
+            if (!restored.employees || !restored.shifts) {
+                showToast('Gecersiz yedek dosyasi', 'error');
+                return;
+            }
+            if (!confirm(`${restored.employees.length} calisan ve ${restored.shifts.length} vardiya geri yuklenecek. Mevcut veriler silinecek. Devam?`)) return;
+            data = restored;
+            saveData();
+            renderCurrentTab();
+            showToast('Veriler basariyla geri yuklendi');
+        } catch (err) {
+            showToast('Dosya okunamadi: ' + err.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function copyPreviousWeek() {
+    const currentDates = getWeekDates(currentWeekStart);
+    const prevMonday = fromLocalDateString(currentWeekStart);
+    prevMonday.setDate(prevMonday.getDate() - 7);
+    const prevDates = getWeekDates(toLocalDateString(prevMonday));
+
+    const prevShifts = data.shifts.filter(s => prevDates.includes(s.date));
+    if (prevShifts.length === 0) {
+        showToast('Onceki haftada kopyalanacak vardiya yok', 'error');
+        return;
+    }
+
+    const existingShifts = data.shifts.filter(s => currentDates.includes(s.date));
+    if (existingShifts.length > 0) {
+        if (!confirm('Bu haftada zaten vardiyalar var. Onceki haftayi kopyalamak uzerine yazacaktir. Devam etmek istiyor musunuz?')) return;
+        data.shifts = data.shifts.filter(s => !currentDates.includes(s.date));
+    }
+
+    prevShifts.forEach(shift => {
+        const dayIndex = prevDates.indexOf(shift.date);
+        if (dayIndex >= 0) {
+            data.shifts.push({
+                ...shift,
+                id: generateId(),
+                date: currentDates[dayIndex],
+                actualStart: '',
+                actualEnd: '',
+                actualHours: shift.hours,
+                overtime: 0,
+                createdAt: new Date().toISOString()
+            });
+        }
+    });
+
+    saveData();
+    renderCurrentTab();
+    showToast(`${prevShifts.length} vardiya onceki haftadan kopyalandi`);
+}
+
+function clearCurrentWeek() {
+    const dates = getWeekDates(currentWeekStart);
+    const weekShifts = data.shifts.filter(s => dates.includes(s.date));
+    if (weekShifts.length === 0) {
+        showToast('Bu haftada silinecek vardiya yok', 'error');
+        return;
+    }
+    if (!confirm(`Bu haftadaki ${weekShifts.length} vardiyayi silmek istediginize emin misiniz?`)) return;
+    data.shifts = data.shifts.filter(s => !dates.includes(s.date));
+    saveData();
+    renderCurrentTab();
+    showToast(`${weekShifts.length} vardiya silindi`);
+}
+
 function exportToCSV() {
     const dates = getWeekDates(currentWeekStart);
     const weekShifts = data.shifts.filter(s => dates.includes(s.date));
@@ -1504,6 +1690,11 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
 
 document.getElementById('btn-add-employee').addEventListener('click', () => showEmployeeForm());
 document.getElementById('btn-export').addEventListener('click', exportToCSV);
+document.getElementById('btn-copy-week').addEventListener('click', copyPreviousWeek);
+document.getElementById('btn-clear-week').addEventListener('click', clearCurrentWeek);
+document.getElementById('btn-backup').addEventListener('click', backupData);
+document.getElementById('btn-restore').addEventListener('click', () => document.getElementById('restore-file-input').click());
+document.getElementById('restore-file-input').addEventListener('change', restoreData);
 
 document.getElementById('prev-week').addEventListener('click', () => {
     const d = fromLocalDateString(currentWeekStart);
@@ -1536,6 +1727,16 @@ document.getElementById('summary-next-week').addEventListener('click', () => {
     d.setDate(d.getDate() + 7);
     currentWeekStart = toLocalDateString(d);
     renderCurrentTab();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modal-overlay');
+        if (!modal.classList.contains('hidden')) {
+            closeModal();
+        }
+    }
 });
 
 renderWeekly();

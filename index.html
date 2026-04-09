@@ -867,6 +867,30 @@ header h1 {
 }
 
 .install-banner-close:hover { color: #fff; }
+
+.btn-whatsapp {
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: #fff;
+    border: none;
+}
+.btn-whatsapp:hover { opacity: 0.88; }
+
+.notify-list { max-height: 60vh; overflow-y: auto; padding-right: 4px; }
+
+.notify-employee-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.notify-employee-row:last-child { border-bottom: none; }
+.notify-employee-info { flex: 1; min-width: 0; }
+.notify-employee-name { font-weight: 600; font-size: 0.9rem; }
+.notify-employee-shifts { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 3px; line-height: 1.5; white-space: pre-line; }
+.notify-no-phone { font-size: 0.75rem; color: rgba(255,100,100,0.7); font-style: italic; margin-top: 3px; }
     </style>
 </head>
 <body>
@@ -903,6 +927,7 @@ header h1 {
                 <button class="btn btn-primary" id="btn-today">Bugun</button>
                 <button class="btn btn-secondary" id="btn-copy-week" title="Onceki haftanin vardiyalarini kopyala">&#128203; Kopyala</button>
                 <button class="btn btn-danger btn-sm" id="btn-clear-week" title="Bu haftanin tum vardiyalarini sil">&#128465; Temizle</button>
+                <button class="btn btn-whatsapp" id="btn-notify-all" title="Haftalik vardiylari WhatsApp ile bildir">&#128240; Bildirim Gonder</button>
             </div>
 
             <div class="week-legend">
@@ -1249,13 +1274,14 @@ function renderEmployees() {
                     <div class="employee-avatar">${initials}</div>
                     <div style="flex:1;">
                         <div class="employee-name">${emp.name}</div>
-                        <div class="employee-role">${emp.role || 'Calisan'} - Bu hafta ${totalHours}/${target}s${totalOvertime > 0 ? ` (<span style="color:#f59e0b">+${totalOvertime.toFixed(1)} fazla</span>)` : ''}</div>
+                        <div class="employee-role">${emp.role || 'Calisan'} - Bu hafta ${totalHours}/${target}s${totalOvertime > 0 ? ` (<span style="color:#f59e0b">+${totalOvertime.toFixed(1)} fazla</span>)` : ''}${emp.phone ? ` · <span style="color:rgba(255,255,255,0.35)">${emp.phone}</span>` : ''}</div>
                         <div style="margin-top:6px;background:rgba(255,255,255,0.08);border-radius:4px;height:4px;overflow:hidden;">
                             <div style="width:${progress}%;height:100%;background:${progressColor};border-radius:4px;transition:width 0.3s;"></div>
                         </div>
                     </div>
                 </div>
                 <div class="employee-actions">
+                    ${emp.phone ? `<button class="btn btn-sm btn-whatsapp" onclick="sendEmployeeNotification('${emp.id}')" title="WhatsApp ile vardiya bildir">&#128240; WA</button>` : ''}
                     <button class="btn btn-sm btn-secondary" onclick="editEmployee('${emp.id}')">Duzenle</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${emp.id}')">Sil</button>
                 </div>
@@ -1381,6 +1407,10 @@ function showEmployeeForm(employee = null) {
             <input type="text" id="emp-role" value="${employee ? employee.role || '' : ''}" placeholder="Pozisyon girin">
         </div>
         <div class="form-group">
+            <label>Telefon Numarasi</label>
+            <input type="tel" id="emp-phone" value="${employee ? employee.phone || '' : ''}" placeholder="05xx xxx xx xx">
+        </div>
+        <div class="form-group">
             <label>Haftalik Hedef Saat</label>
             <input type="number" id="emp-weekly-target" value="${employee ? employee.weeklyTarget || 40 : 40}" min="0" max="168" placeholder="40">
         </div>
@@ -1395,6 +1425,7 @@ function showEmployeeForm(employee = null) {
 function saveEmployee() {
     const name = document.getElementById('emp-name').value.trim();
     const role = document.getElementById('emp-role').value.trim();
+    const phone = document.getElementById('emp-phone').value.trim();
     const weeklyTarget = parseInt(document.getElementById('emp-weekly-target').value) || 40;
 
     if (!name) {
@@ -1407,6 +1438,7 @@ function saveEmployee() {
         if (emp) {
             emp.name = name;
             emp.role = role;
+            emp.phone = phone;
             emp.weeklyTarget = weeklyTarget;
         }
         showToast('Calisan guncellendi');
@@ -1415,6 +1447,7 @@ function saveEmployee() {
             id: generateId(),
             name,
             role,
+            phone,
             weeklyTarget,
             createdAt: new Date().toISOString()
         });
@@ -1792,6 +1825,108 @@ function exportToCSV() {
     showToast('Haftalik plan CSV olarak indirildi');
 }
 
+function getWhatsAppLink(phone, message) {
+    let clean = phone.replace(/[\s\-\(\)\.]/g, '');
+    if (clean.startsWith('05')) clean = '9' + clean;
+    else if (clean.startsWith('5')) clean = '90' + clean;
+    return 'https://wa.me/' + clean + '?text=' + encodeURIComponent(message);
+}
+
+function generateShiftMessage(employeeId) {
+    const emp = data.employees.find(e => e.id === employeeId);
+    if (!emp) return '';
+    const dates = getWeekDates(currentWeekStart);
+    const weekEnd = dates[6];
+    const dayNames = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    const monthNames = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+    function fmtDate(dateStr) {
+        const d = fromLocalDateString(dateStr);
+        return d.getDate() + ' ' + monthNames[d.getMonth()];
+    }
+
+    let lines = [];
+    let totalHours = 0;
+    dates.forEach((date, i) => {
+        const shifts = data.shifts.filter(s => s.employeeId === employeeId && s.date === date);
+        if (shifts.length === 0) {
+            lines.push(dayNames[i] + ', ' + fmtDate(date) + ': Vardiya yok');
+        } else {
+            shifts.forEach(s => {
+                const typeInfo = SHIFT_TYPES[s.type] || { label: s.type };
+                const detail = s.type === 'izin' ? 'Izin' : (typeInfo.label + ' ' + s.start + '-' + s.end);
+                lines.push(dayNames[i] + ', ' + fmtDate(date) + ': ' + detail);
+                totalHours += s.hours || 0;
+            });
+        }
+    });
+
+    return 'Merhaba ' + emp.name + ',\n' +
+        fmtDate(currentWeekStart) + ' - ' + fmtDate(weekEnd) + ' haftasi vardiya programiniz:\n\n' +
+        lines.join('\n') + '\n\n' +
+        'Toplam: ' + totalHours + ' saat\n' +
+        'Iyi calismalar!';
+}
+
+function sendEmployeeNotification(employeeId) {
+    const emp = data.employees.find(e => e.id === employeeId);
+    if (!emp) return;
+    if (!emp.phone) {
+        showToast('Bu calisan icin telefon numarasi tanimlanmamis', 'error');
+        return;
+    }
+    const message = generateShiftMessage(employeeId);
+    const link = getWhatsAppLink(emp.phone, message);
+    window.open(link, '_blank');
+}
+
+function showAllNotifications() {
+    if (data.employees.length === 0) {
+        showToast('Hic calisan eklenmemis', 'error');
+        return;
+    }
+
+    const rows = data.employees.map(emp => {
+        const preview = generateShiftMessage(emp.id)
+            .split('\n').slice(2, 9).join('\n');
+
+        if (emp.phone) {
+            const link = getWhatsAppLink(emp.phone, generateShiftMessage(emp.id));
+            return `<div class="notify-employee-row">
+                <div class="notify-employee-info">
+                    <div class="notify-employee-name">${emp.name}</div>
+                    <div class="notify-employee-shifts">${preview}</div>
+                </div>
+                <a href="${link}" target="_blank" class="btn btn-sm btn-whatsapp" style="text-decoration:none;white-space:nowrap;">&#128240; Gonder</a>
+            </div>`;
+        } else {
+            return `<div class="notify-employee-row">
+                <div class="notify-employee-info">
+                    <div class="notify-employee-name">${emp.name}</div>
+                    <div class="notify-no-phone">Telefon numarasi tanimli degil - Calisanlar sekmesinden ekleyin</div>
+                </div>
+            </div>`;
+        }
+    }).join('');
+
+    const dates = getWeekDates(currentWeekStart);
+    const weekEnd = dates[6];
+    const monthNames = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    function fmtDate(dateStr) {
+        const d = fromLocalDateString(dateStr);
+        return d.getDate() + ' ' + monthNames[d.getMonth()];
+    }
+
+    const content = `
+        <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:14px;">${fmtDate(currentWeekStart)} - ${fmtDate(weekEnd)} haftasi icin bildirimler</p>
+        <div class="notify-list">${rows}</div>
+        <div class="form-actions" style="margin-top:14px;">
+            <button class="btn btn-secondary" onclick="closeModal()">Kapat</button>
+        </div>
+    `;
+    openModal('WhatsApp Vardiya Bildirimleri', content);
+}
+
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
 });
@@ -1805,6 +1940,7 @@ document.getElementById('btn-add-employee').addEventListener('click', () => show
 document.getElementById('btn-export').addEventListener('click', exportToCSV);
 document.getElementById('btn-copy-week').addEventListener('click', copyPreviousWeek);
 document.getElementById('btn-clear-week').addEventListener('click', clearCurrentWeek);
+document.getElementById('btn-notify-all').addEventListener('click', showAllNotifications);
 document.getElementById('btn-backup').addEventListener('click', backupData);
 document.getElementById('btn-restore').addEventListener('click', () => document.getElementById('restore-file-input').click());
 document.getElementById('restore-file-input').addEventListener('change', restoreData);

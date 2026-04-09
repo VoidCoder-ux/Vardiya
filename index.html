@@ -938,6 +938,66 @@ header h1 {
 .bulk-send-btn:disabled { opacity:0.4; cursor:not-allowed; }
 .bulk-hidden { display:none !important; }
 .bulk-no-result { text-align:center; color:rgba(255,255,255,0.3); font-size:0.85rem; padding:20px 0; }
+
+/* ── Aylık Rapor ────────────────────────────────────── */
+.monthly-nav { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:18px; }
+.monthly-title { font-size:1.1rem; font-weight:700; min-width:160px; text-align:center; }
+.monthly-stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-bottom:18px; }
+.monthly-stat { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:14px 10px; text-align:center; }
+.monthly-stat-value { font-size:1.5rem; font-weight:800; color:#a78bfa; }
+.monthly-stat-label { font-size:0.7rem; color:rgba(255,255,255,0.45); margin-top:4px; }
+.monthly-table-container { overflow-x:auto; border-radius:12px; }
+.monthly-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+.monthly-table th { background:rgba(255,255,255,0.05); padding:8px 10px; text-align:left; color:rgba(255,255,255,0.5); font-weight:600; font-size:0.72rem; white-space:nowrap; }
+.monthly-table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; }
+.monthly-table tr:last-child td { border-bottom:none; }
+.monthly-table tr:hover td { background:rgba(255,255,255,0.02); }
+.monthly-emp-name { font-weight:600; font-size:0.85rem; }
+.monthly-emp-role { font-size:0.7rem; color:rgba(255,255,255,0.4); }
+.monthly-hours { font-weight:700; color:#a78bfa; }
+.monthly-ot-pos { color:#f59e0b; font-weight:600; }
+.monthly-ot-neg { color:#ef4444; font-weight:600; }
+.monthly-badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:0.65rem; font-weight:700; margin:1px; }
+
+/* ── Şablon Sistemi ──────────────────────────────────── */
+.template-list { display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto; margin-bottom:14px; }
+.template-item { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; gap:10px; }
+.template-item:hover { border-color:rgba(167,139,250,0.3); }
+.template-name { font-weight:600; font-size:0.88rem; }
+.template-meta { font-size:0.7rem; color:rgba(255,255,255,0.4); margin-top:2px; }
+.template-actions { display:flex; gap:6px; flex-shrink:0; }
+.btn-template-apply { background:rgba(167,139,250,0.15); border:1px solid rgba(167,139,250,0.3); color:#a78bfa; }
+.btn-template-apply:hover { background:rgba(167,139,250,0.25); }
+.btn-template-del { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); color:#f87171; }
+.btn-template-del:hover { background:rgba(239,68,68,0.2); }
+.template-empty { text-align:center; color:rgba(255,255,255,0.3); font-size:0.85rem; padding:20px 0; }
+
+/* ── Eksik Vardiya Uyarıları ─────────────────────────── */
+.warning-panel { margin-bottom:14px; display:flex; flex-direction:column; gap:6px; }
+.warning-item { display:flex; align-items:flex-start; gap:8px; padding:8px 12px; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.2); border-radius:8px; font-size:0.78rem; color:rgba(255,255,255,0.8); }
+.warning-item.danger { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.2); }
+.warning-icon { flex-shrink:0; }
+
+/* ── Paylaş ──────────────────────────────────────────── */
+.share-url-box { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:10px 12px; font-size:0.78rem; word-break:break-all; color:rgba(255,255,255,0.7); margin-bottom:12px; font-family:monospace; }
+.share-readonly-header { background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(244,114,182,0.1)); border:1px solid rgba(167,139,250,0.2); border-radius:12px; padding:14px; margin-bottom:16px; text-align:center; }
+
+/* ── Print ───────────────────────────────────────────── */
+@media print {
+    body { background:#fff !important; color:#000 !important; }
+    .noise-overlay,.tabs,.week-nav,.install-banner,.toast-container,.modal-overlay,
+    #tab-employees,#tab-summary,#tab-monthly,.section-header,.warning-panel { display:none !important; }
+    .container { max-width:100% !important; padding:0 !important; }
+    #tab-weekly { display:block !important; }
+    .week-grid-container { overflow:visible !important; }
+    .week-grid { font-size:0.65rem; min-width:0 !important; }
+    .grid-cell { padding:4px !important; min-height:40px !important; background:#fff !important; border-color:#ddd !important; }
+    .grid-cell.employee-name-cell { color:#000 !important; background:#f5f5f5 !important; }
+    .shift-badge { background:#eee !important; color:#000 !important; border:1px solid #ccc !important; font-size:0.55rem !important; }
+    .grid-header-cell { background:#f0f0f0 !important; color:#000 !important; }
+    .print-header { display:block !important; }
+}
+.print-header { display:none; text-align:center; font-size:1rem; font-weight:700; margin-bottom:12px; padding:8px; border-bottom:2px solid #000; }
     </style>
 </head>
 <body>
@@ -961,6 +1021,10 @@ header h1 {
                 <span class="tab-icon">&#128202;</span>
                 Haftalik Ozet
             </button>
+            <button class="tab" data-tab="monthly">
+                <span class="tab-icon">&#128197;</span>
+                Aylik Rapor
+            </button>
         </nav>
 
         <div class="tab-content" id="tab-weekly">
@@ -974,6 +1038,9 @@ header h1 {
                 <button class="btn btn-primary" id="btn-today">Bugun</button>
                 <button class="btn btn-secondary" id="btn-copy-week" title="Onceki haftanin vardiyalarini kopyala">&#128203; Kopyala</button>
                 <button class="btn btn-danger btn-sm" id="btn-clear-week" title="Bu haftanin tum vardiyalarini sil">&#128465; Temizle</button>
+                <button class="btn btn-secondary" id="btn-template" title="Vardiya sablonlarini yonet">&#128203; Sablon</button>
+                <button class="btn btn-secondary" id="btn-share-week" title="Bu haftayi paylasılabilir link olustur">&#128279; Paylas</button>
+                <button class="btn btn-secondary" id="btn-print" title="Haftalik plani yazdir" onclick="window.print()">&#128438; Yazdir</button>
                 <button class="btn btn-whatsapp" id="btn-notify-all" title="Haftalik vardiylari WhatsApp ile bildir">&#128240; Bildirim Gonder</button>
                 <button class="btn btn-primary" id="btn-bulk-msg" title="Secili calisanlara toplu mesaj gonder">&#128172; Toplu Mesaj</button>
             </div>
@@ -1004,6 +1071,9 @@ header h1 {
                     <span>Ozel</span>
                 </div>
             </div>
+
+            <div class="print-header" id="print-header"></div>
+            <div id="weekly-warnings"></div>
 
             <div class="week-grid-container">
                 <div class="week-grid" id="week-grid"></div>
@@ -1051,6 +1121,19 @@ header h1 {
             <div class="summary-stats" id="summary-stats"></div>
             <div class="summary-table-container" id="summary-table"></div>
         </div>
+
+        <div class="tab-content hidden" id="tab-monthly">
+            <div class="section-header">
+                <h2>Aylik Rapor</h2>
+            </div>
+            <div class="monthly-nav">
+                <button class="btn btn-secondary btn-icon" id="monthly-prev">&#9664;</button>
+                <span class="monthly-title" id="monthly-title"></span>
+                <button class="btn btn-secondary btn-icon" id="monthly-next">&#9654;</button>
+            </div>
+            <div class="monthly-stat-grid" id="monthly-stats"></div>
+            <div class="monthly-table-container" id="monthly-table"></div>
+        </div>
     </div>
 
     <div class="modal-overlay hidden" id="modal-overlay">
@@ -1089,6 +1172,7 @@ let editingEmployeeId = null;
 let bulkDayFilter = null;
 let bulkTypeFilter = null;
 let bulkMode = 'vardiya';
+let currentMonthDate = new Date();
 
 const DAYS = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const DAYS_SHORT = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -1146,8 +1230,12 @@ function getResmiTatil(dateStr) {
 
 function loadData() {
     const saved = localStorage.getItem(DB_KEY);
-    if (saved) return JSON.parse(saved);
-    return { employees: [], shifts: [] };
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.templates) parsed.templates = [];
+        return parsed;
+    }
+    return { employees: [], shifts: [], templates: [] };
 }
 
 function saveData() {
@@ -1251,6 +1339,7 @@ function renderCurrentTab() {
         case 'weekly': renderWeekly(); break;
         case 'employees': renderEmployees(); break;
         case 'summary': renderSummary(); break;
+        case 'monthly': renderMonthly(); break;
     }
 }
 
@@ -1269,6 +1358,9 @@ function renderWeekly() {
     const today = getToday();
     const weekEnd = dates[6];
     document.getElementById('week-dates').textContent = `${formatDateFull(currentWeekStart)} - ${formatDateFull(weekEnd)}`;
+    // Baskı başlığını güncelle
+    const phEl = document.getElementById('print-header');
+    if (phEl) phEl.textContent = 'Haftalik Vardiya Plani — ' + formatDateFull(currentWeekStart) + ' / ' + formatDateFull(weekEnd);
 
     const todayMonday = getMonday(new Date());
     const weekTitleEl = document.getElementById('week-title');
@@ -1336,6 +1428,7 @@ function renderWeekly() {
 
     grid.innerHTML = html;
     grid.style.gridTemplateColumns = `120px repeat(7, 1fr)`;
+    renderWeeklyWarnings();
 }
 
 function renderEmployees() {
@@ -2245,6 +2338,367 @@ function sendBulkWhatsApp() {
     if (noPhone > 0) showToast(noPhone + ' calisanin telefonu tanimli degil', 'warning');
 }
 
+// ── Aylık Rapor ────────────────────────────────────────────────────
+function renderMonthly() {
+    const MONTH_NAMES = ['Ocak','Subat','Mart','Nisan','Mayis','Haziran',
+                         'Temmuz','Agustos','Eylul','Ekim','Kasim','Aralik'];
+    const y = currentMonthDate.getFullYear();
+    const m = currentMonthDate.getMonth();
+    document.getElementById('monthly-title').textContent = MONTH_NAMES[m] + ' ' + y;
+
+    // Get all dates in this month
+    const firstDay = new Date(y, m, 1);
+    const lastDay = new Date(y, m + 1, 0);
+    const allDates = [];
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+        allDates.push(toLocalDateString(new Date(d)));
+    }
+
+    const monthShifts = data.shifts.filter(s => allDates.includes(s.date));
+    const totalShifts = monthShifts.length;
+    const totalHours = monthShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+    const totalOvertime = monthShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
+    const izinCount = monthShifts.filter(s => s.type === 'izin').length;
+
+    document.getElementById('monthly-stats').innerHTML = `
+        <div class="monthly-stat"><div class="monthly-stat-value">${totalShifts}</div><div class="monthly-stat-label">Toplam Vardiya</div></div>
+        <div class="monthly-stat"><div class="monthly-stat-value">${totalHours}</div><div class="monthly-stat-label">Toplam Saat</div></div>
+        <div class="monthly-stat"><div class="monthly-stat-value">${totalOvertime > 0 ? '+' : ''}${totalOvertime.toFixed(1)}</div><div class="monthly-stat-label">Fazla Mesai</div></div>
+        <div class="monthly-stat"><div class="monthly-stat-value">${izinCount}</div><div class="monthly-stat-label">Izin Gunu</div></div>
+        <div class="monthly-stat"><div class="monthly-stat-value">${data.employees.length}</div><div class="monthly-stat-label">Calisan</div></div>
+    `;
+
+    if (data.employees.length === 0) {
+        document.getElementById('monthly-table').innerHTML = '<div class="empty-state"><p style="font-size:2rem;margin-bottom:12px;">&#128197;</p><p>Henuz veri yok</p></div>';
+        return;
+    }
+
+    const SHIFT_COLORS = { sabah:'#fbbf24', aksam:'#f97316', gece:'#6366f1', ogle:'#22c55e', izin:'#06b6d4', ozel:'#a855f7' };
+
+    let html = '<table class="monthly-table"><thead><tr>';
+    html += '<th>Calisan</th><th>Toplam Saat</th><th>Fazla Mesai</th><th>Sabah</th><th>Aksam</th><th>Gece</th><th>Ogle</th><th>Izin</th><th>Vardiya / Hafta</th>';
+    html += '</tr></thead><tbody>';
+
+    data.employees.forEach(emp => {
+        const empShifts = monthShifts.filter(s => s.employeeId === emp.id);
+        const hours = empShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+        const ot = empShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
+        const counts = { sabah:0, aksam:0, gece:0, ogle:0, izin:0, ozel:0 };
+        empShifts.forEach(s => { if (counts[s.type] !== undefined) counts[s.type]++; });
+        const workedDays = empShifts.filter(s => s.type !== 'izin').length;
+        const weeksInMonth = Math.ceil(allDates.length / 7);
+        const avgPerWeek = weeksInMonth > 0 ? (workedDays / weeksInMonth).toFixed(1) : 0;
+
+        const otClass = ot > 0 ? 'monthly-ot-pos' : ot < 0 ? 'monthly-ot-neg' : '';
+        const otText = ot !== 0 ? (ot > 0 ? '+' : '') + ot.toFixed(1) : '-';
+
+        html += `<tr>
+            <td><div class="monthly-emp-name">${emp.name}</div><div class="monthly-emp-role">${emp.role || ''}</div></td>
+            <td><span class="monthly-hours">${hours}s</span></td>
+            <td class="${otClass}">${otText}</td>
+            <td>${counts.sabah || '-'}</td>
+            <td>${counts.aksam || '-'}</td>
+            <td>${counts.gece || '-'}</td>
+            <td>${counts.ogle || '-'}</td>
+            <td>${counts.izin || '-'}</td>
+            <td>${avgPerWeek} gün/hafta</td>
+        </tr>`;
+    });
+
+    html += '</tbody></table>';
+    document.getElementById('monthly-table').innerHTML = html;
+}
+
+// ── Vardiya Şablonları ──────────────────────────────────────────────
+function showTemplateModal() {
+    const dates = getWeekDates(currentWeekStart);
+    const weekShifts = data.shifts.filter(s => dates.includes(s.date));
+    const hasShifts = weekShifts.length > 0;
+
+    const templateRows = data.templates.length === 0
+        ? '<div class="template-empty">Henuz kayitli sablon yok</div>'
+        : data.templates.map(tpl => {
+            const empCount = [...new Set(tpl.shifts.map(s => s.employeeId))].length;
+            const shiftCount = tpl.shifts.length;
+            const d = new Date(tpl.createdAt);
+            const dateStr = d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear();
+            return `<div class="template-item">
+                <div>
+                    <div class="template-name">${tpl.name}</div>
+                    <div class="template-meta">${empCount} calisan · ${shiftCount} vardiya · ${dateStr}</div>
+                </div>
+                <div class="template-actions">
+                    <button class="btn btn-sm btn-template-apply" onclick="applyTemplate('${tpl.id}')">Uygula</button>
+                    <button class="btn btn-sm btn-template-del" onclick="deleteTemplate('${tpl.id}')">Sil</button>
+                </div>
+            </div>`;
+        }).join('');
+
+    const content = `
+        ${hasShifts ? `
+        <div class="form-group" style="margin-bottom:14px;">
+            <label>Bu Haftayi Sablon Olarak Kaydet</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" id="template-name-input" placeholder="Sablon adi (ör: Standart Hafta)" style="flex:1;">
+                <button class="btn btn-primary btn-sm" onclick="saveWeekAsTemplate()">Kaydet</button>
+            </div>
+        </div>
+        ` : `<p style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-bottom:14px;">Bu haftaya vardiya ekledikten sonra sablon olarak kaydedebilirsiniz.</p>`}
+        <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:8px;font-weight:600;">Kayitli Sablonlar</div>
+        <div class="template-list">${templateRows}</div>
+        <div class="form-actions"><button class="btn btn-secondary" onclick="closeModal()">Kapat</button></div>
+    `;
+    openModal('Vardiya Sablonlari', content);
+}
+
+function saveWeekAsTemplate() {
+    const nameInput = document.getElementById('template-name-input');
+    const name = (nameInput ? nameInput.value : '').trim();
+    if (!name) { showToast('Sablon adi girin', 'error'); return; }
+
+    const dates = getWeekDates(currentWeekStart);
+    const weekShifts = data.shifts.filter(s => dates.includes(s.date));
+    if (weekShifts.length === 0) { showToast('Bu haftada kaydedilecek vardiya yok', 'error'); return; }
+
+    const templateShifts = weekShifts.map(s => ({
+        employeeId: s.employeeId,
+        dayOffset: dates.indexOf(s.date),
+        type: s.type,
+        start: s.start,
+        end: s.end,
+        hours: s.hours,
+    }));
+
+    data.templates.push({
+        id: generateId(),
+        name,
+        createdAt: new Date().toISOString(),
+        shifts: templateShifts,
+    });
+    saveData();
+    showToast('Sablon kaydedildi: ' + name);
+    showTemplateModal();
+}
+
+function applyTemplate(templateId) {
+    const tpl = data.templates.find(t => t.id === templateId);
+    if (!tpl) return;
+    const dates = getWeekDates(currentWeekStart);
+
+    // Check employees still exist
+    const missingEmps = [...new Set(tpl.shifts.map(s => s.employeeId))]
+        .filter(id => !data.employees.find(e => e.id === id));
+
+    let msg = tpl.shifts.length + ' vardiya mevcut haftaya uygulanacak.';
+    if (missingEmps.length > 0) msg += ' ' + missingEmps.length + ' calisan artik mevcut degil (atlanacak).';
+    if (!confirm(msg + ' Devam?')) return;
+
+    tpl.shifts.forEach(ts => {
+        if (ts.dayOffset < 0 || ts.dayOffset > 6) return;
+        if (!data.employees.find(e => e.id === ts.employeeId)) return;
+        const targetDate = dates[ts.dayOffset];
+        // Skip if shift already exists for this employee on this day
+        const existing = data.shifts.find(s => s.employeeId === ts.employeeId && s.date === targetDate);
+        if (existing) return;
+        data.shifts.push({
+            id: generateId(),
+            employeeId: ts.employeeId,
+            date: targetDate,
+            type: ts.type,
+            start: ts.start,
+            end: ts.end,
+            hours: ts.hours,
+            actualStart: '',
+            actualEnd: '',
+            actualHours: ts.hours,
+            overtime: 0,
+            note: '',
+            createdAt: new Date().toISOString(),
+        });
+    });
+    saveData();
+    closeModal();
+    showToast('Sablon uygulandi: ' + tpl.name);
+    renderCurrentTab();
+}
+
+function deleteTemplate(templateId) {
+    const tpl = data.templates.find(t => t.id === templateId);
+    if (!tpl) return;
+    if (!confirm('"' + tpl.name + '" sablonu silinecek. Emin misiniz?')) return;
+    data.templates = data.templates.filter(t => t.id !== templateId);
+    saveData();
+    showToast('Sablon silindi');
+    showTemplateModal();
+}
+
+// ── Eksik Vardiya Uyarıları ─────────────────────────────────────────
+function renderWeeklyWarnings() {
+    const container = document.getElementById('weekly-warnings');
+    if (!container) return;
+    const warnings = [];
+    const dates = getWeekDates(currentWeekStart);
+
+    // Günlük boş günleri kontrol et (hiç vardiya atanmamış iş günleri)
+    dates.slice(0, 5).forEach((date, i) => {
+        const dayShifts = data.shifts.filter(s => s.date === date && s.type !== 'izin');
+        if (data.employees.length > 0 && dayShifts.length === 0) {
+            warnings.push({ text: DAYS[i] + ' gunu hic calisan atanmamis', type: 'warn' });
+        }
+    });
+
+    // Hedef saate ulaşamayan çalışanları kontrol et
+    data.employees.forEach(emp => {
+        const empShifts = data.shifts.filter(s => s.employeeId === emp.id && dates.includes(s.date));
+        const totalHours = empShifts.reduce((sum, s) => sum + (s.hours || 0), 0);
+        const target = emp.weeklyTarget || 40;
+        if (empShifts.length > 0 && totalHours < target) {
+            warnings.push({ text: emp.name + ': ' + totalHours + 'h / ' + target + 'h (eksik ' + (target - totalHours) + 'h)', type: 'info' });
+        }
+    });
+
+    if (warnings.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = '<div class="warning-panel">' +
+        warnings.map(w => `<div class="warning-item${w.type === 'warn' ? ' danger' : ''}">
+            <span class="warning-icon">${w.type === 'warn' ? '⚠️' : '📊'}</span>
+            <span>${w.text}</span>
+        </div>`).join('') +
+        '</div>';
+}
+
+// ── Paylaşılabilir Link ─────────────────────────────────────────────
+function shareWeek() {
+    const dates = getWeekDates(currentWeekStart);
+    const weekShifts = data.shifts.filter(s => dates.includes(s.date));
+    const MONTH_NAMES = ['Oca','Sub','Mar','Nis','May','Haz','Tem','Agu','Eyl','Eki','Kas','Ara'];
+
+    if (weekShifts.length === 0 && data.employees.length === 0) {
+        showToast('Paylasilacak veri yok', 'error');
+        return;
+    }
+
+    // Build compact share payload
+    const payload = {
+        week: currentWeekStart,
+        employees: data.employees.map(e => ({ id: e.id, name: e.name, role: e.role || '' })),
+        shifts: weekShifts.map(s => ({
+            eid: s.employeeId, date: s.date, type: s.type,
+            start: s.start, end: s.end, hours: s.hours
+        }))
+    };
+
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const shareUrl = window.location.href.split('#')[0] + '#share=' + encoded;
+
+    const weekEnd = dates[6];
+    function fmtD(dateStr) {
+        const d = fromLocalDateString(dateStr);
+        return d.getDate() + ' ' + MONTH_NAMES[d.getMonth()];
+    }
+
+    const content = `
+        <div class="share-readonly-header">
+            <div style="font-size:1.5rem;margin-bottom:6px;">&#128279;</div>
+            <div style="font-weight:700;">${fmtD(currentWeekStart)} - ${fmtD(weekEnd)} haftasi</div>
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin-top:4px;">${data.employees.length} calisan · ${weekShifts.length} vardiya</div>
+        </div>
+        <p style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">Asagidaki linki kopyalayarak paylasabilirsiniz. Link acildiginda haftalik program goruntulenir (veri degistirilemez).</p>
+        <div class="share-url-box" id="share-url-text">${shareUrl}</div>
+        <div class="form-actions">
+            <button class="btn btn-primary" onclick="copyShareUrl('${encoded}')">&#128203; Linki Kopyala</button>
+            <button class="btn btn-secondary" onclick="closeModal()">Kapat</button>
+        </div>
+    `;
+    openModal('Haftalik Plani Paylas', content);
+}
+
+function copyShareUrl(encoded) {
+    const shareUrl = window.location.href.split('#')[0] + '#share=' + encoded;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showToast('Link panoya kopyalandi');
+            closeModal();
+        }).catch(() => fallbackCopy(shareUrl));
+    } else {
+        fallbackCopy(shareUrl);
+    }
+}
+
+function fallbackCopy(text) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.position = 'fixed';
+    el.style.opacity = '0';
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showToast('Link panoya kopyalandi');
+    closeModal();
+}
+
+function checkAndShowShare() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#share=')) return;
+    try {
+        const encoded = hash.slice(7);
+        const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+        if (!payload.week || !payload.employees || !payload.shifts) return;
+
+        const dates = getWeekDates(payload.week);
+        const MONTH_NAMES = ['Oca','Sub','Mar','Nis','May','Haz','Tem','Agu','Eyl','Eki','Kas','Ara'];
+        function fmtD(dateStr) {
+            const d = fromLocalDateString(dateStr);
+            return d.getDate() + ' ' + MONTH_NAMES[d.getMonth()];
+        }
+        const weekEnd = dates[6];
+
+        let tableHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.78rem;"><thead><tr style="background:rgba(255,255,255,0.05);">';
+        tableHtml += '<th style="padding:8px;text-align:left;">Calisan</th>';
+        dates.forEach((date, i) => {
+            const d = fromLocalDateString(date);
+            tableHtml += `<th style="padding:6px 4px;text-align:center;">${DAYS_SHORT[i]}<br><span style="font-size:0.65rem;opacity:0.5;">${d.getDate()}</span></th>`;
+        });
+        tableHtml += '</tr></thead><tbody>';
+
+        payload.employees.forEach(emp => {
+            tableHtml += `<tr><td style="padding:7px 8px;font-weight:600;">${emp.name}<br><span style="font-size:0.68rem;opacity:0.4;">${emp.role}</span></td>`;
+            dates.forEach(date => {
+                const shift = payload.shifts.find(s => s.eid === emp.id && s.date === date);
+                if (shift) {
+                    const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
+                    const cls = getShiftBadgeClass(shift.type);
+                    tableHtml += `<td style="padding:4px;text-align:center;"><span class="shift-badge ${cls}" style="font-size:0.55rem;">${typeInfo.label}</span></td>`;
+                } else {
+                    tableHtml += '<td style="padding:4px;text-align:center;color:rgba(255,255,255,0.15);">-</td>';
+                }
+            });
+            tableHtml += '</tr>';
+        });
+        tableHtml += '</tbody></table>';
+
+        const content = `
+            <div class="share-readonly-header">
+                <div style="font-size:1.5rem;margin-bottom:6px;">&#128197;</div>
+                <div style="font-weight:700;">${fmtD(payload.week)} - ${fmtD(weekEnd)}</div>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:4px;">Salt okunur paylasilmis program</div>
+            </div>
+            <div style="overflow-x:auto;">${tableHtml}</div>
+            <div class="form-actions" style="margin-top:14px;">
+                <button class="btn btn-secondary" onclick="closeModal();history.replaceState(null,'',window.location.pathname);">Kapat</button>
+            </div>
+        `;
+        openModal('Paylasilan Vardiya Programi', content);
+        history.replaceState(null, '', window.location.pathname);
+    } catch(e) {
+        console.warn('Share link parse hatasi', e);
+    }
+}
+
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
 });
@@ -2260,6 +2714,17 @@ document.getElementById('btn-copy-week').addEventListener('click', copyPreviousW
 document.getElementById('btn-clear-week').addEventListener('click', clearCurrentWeek);
 document.getElementById('btn-notify-all').addEventListener('click', showAllNotifications);
 document.getElementById('btn-bulk-msg').addEventListener('click', showBulkMessaging);
+document.getElementById('btn-template').addEventListener('click', showTemplateModal);
+document.getElementById('btn-share-week').addEventListener('click', shareWeek);
+
+document.getElementById('monthly-prev').addEventListener('click', () => {
+    currentMonthDate.setMonth(currentMonthDate.getMonth() - 1);
+    renderMonthly();
+});
+document.getElementById('monthly-next').addEventListener('click', () => {
+    currentMonthDate.setMonth(currentMonthDate.getMonth() + 1);
+    renderMonthly();
+});
 document.getElementById('btn-backup').addEventListener('click', backupData);
 document.getElementById('btn-restore').addEventListener('click', () => document.getElementById('restore-file-input').click());
 document.getElementById('restore-file-input').addEventListener('change', restoreData);
@@ -2308,6 +2773,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 renderWeekly();
+checkAndShowShare();
 
 // --- PWA: Service Worker & Install Prompt ---
 let deferredInstallPrompt = null;

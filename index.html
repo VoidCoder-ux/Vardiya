@@ -1451,7 +1451,7 @@ function renderEmployees() {
         const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const weekShifts = data.shifts.filter(s => s.employeeId === emp.id && weekDates.includes(s.date));
         const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
-        const target = emp.weeklyTarget || 40;
+        const target = emp.weeklyTarget || 45;
         const totalOvertime = totalHours > target ? totalHours - target : 0;
         const progress = Math.min((totalHours / target) * 100, 100);
         const progressColor = totalHours > target ? '#f59e0b' : totalHours >= target * 0.8 ? '#22c55e' : '#a78bfa';
@@ -1489,7 +1489,7 @@ function renderSummary() {
     // Fazla mesai: her çalışanın toplam saati - haftalık hedef (hedef bazlı)
     const totalOvertime = data.employees.reduce((sum, emp) => {
         const empHours = weekShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + (s.actualHours || s.hours || 0), 0);
-        const ot = empHours - (emp.weeklyTarget || 40);
+        const ot = empHours - (emp.weeklyTarget || 45);
         return sum + (ot > 0 ? ot : 0);
     }, 0);
 
@@ -1576,7 +1576,7 @@ function renderSummary() {
             }
         });
 
-        const empTarget = emp.weeklyTarget || 40;
+        const empTarget = emp.weeklyTarget || 45;
         const empOvertime = empTotal - empTarget;
         tableHtml += `<td><strong>${empTotal}s</strong></td>`;
         tableHtml += `<td style="color:${empOvertime > 0 ? '#f59e0b' : empOvertime < 0 ? '#ef4444' : 'inherit'}">${empOvertime !== 0 ? (empOvertime > 0 ? '+' : '') + empOvertime.toFixed(1) : '-'}</td>`;
@@ -1605,7 +1605,7 @@ function showEmployeeForm(employee = null) {
         </div>
         <div class="form-group">
             <label>Haftalik Hedef Saat</label>
-            <input type="number" id="emp-weekly-target" value="${employee ? employee.weeklyTarget || 40 : 40}" min="0" max="168" placeholder="40">
+            <input type="number" id="emp-weekly-target" value="${employee ? employee.weeklyTarget || 45 : 45}" min="0" max="168" placeholder="45">
         </div>
         <div class="form-actions">
             <button class="btn btn-secondary" onclick="closeModal()">Iptal</button>
@@ -1619,7 +1619,7 @@ function saveEmployee() {
     const name = document.getElementById('emp-name').value.trim();
     const role = document.getElementById('emp-role').value.trim();
     const phone = document.getElementById('emp-phone').value.trim();
-    const weeklyTarget = parseInt(document.getElementById('emp-weekly-target').value) || 40;
+    const weeklyTarget = parseInt(document.getElementById('emp-weekly-target').value) || 45;
 
     if (!name) {
         showToast('Lutfen ad soyad girin', 'error');
@@ -2364,7 +2364,7 @@ function renderMonthly() {
     const weeksInMonth = Math.ceil(allDates.length / 7);
     const totalOvertime = data.employees.reduce((sum, emp) => {
         const empH = monthShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + (s.actualHours || s.hours || 0), 0);
-        const monthTarget = (emp.weeklyTarget || 40) * weeksInMonth;
+        const monthTarget = (emp.weeklyTarget || 45) * weeksInMonth;
         const ot = empH - monthTarget;
         return sum + (ot > 0 ? ot : 0);
     }, 0);
@@ -2392,7 +2392,7 @@ function renderMonthly() {
     data.employees.forEach(emp => {
         const empShifts = monthShifts.filter(s => s.employeeId === emp.id);
         const hours = empShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
-        const monthTarget = (emp.weeklyTarget || 40) * weeksInMonth;
+        const monthTarget = (emp.weeklyTarget || 45) * weeksInMonth;
         const ot = hours - monthTarget;
         const counts = { sabah:0, aksam:0, gece:0, ogle:0, izin:0, ozel:0 };
         empShifts.forEach(s => { if (counts[s.type] !== undefined) counts[s.type]++; });
@@ -2561,7 +2561,7 @@ function renderWeeklyWarnings() {
     data.employees.forEach(emp => {
         const empShifts = data.shifts.filter(s => s.employeeId === emp.id && dates.includes(s.date));
         const totalHours = empShifts.reduce((sum, s) => sum + (s.hours || 0), 0);
-        const target = emp.weeklyTarget || 40;
+        const target = emp.weeklyTarget || 45;
         if (empShifts.length > 0 && totalHours < target) {
             warnings.push({ text: emp.name + ': ' + totalHours + 'h / ' + target + 'h (eksik ' + (target - totalHours) + 'h)', type: 'info' });
         }

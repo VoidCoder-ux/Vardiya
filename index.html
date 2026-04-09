@@ -260,6 +260,18 @@ header h1 {
 
 .grid-cell.today-col { background: rgba(167, 139, 250, 0.03); }
 
+.week-grid-header .grid-cell.holiday-cell {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(251, 191, 36, 0.08));
+    color: #fbbf24;
+}
+
+.holiday-icon {
+    display: block;
+    font-size: 0.7rem;
+    line-height: 1;
+    margin-top: 2px;
+}
+
 .grid-cell.employee-name-cell {
     position: sticky;
     left: 0;
@@ -740,6 +752,7 @@ header h1 {
 
 .toast-success { border-left: 3px solid #22c55e; }
 .toast-error { border-left: 3px solid #ef4444; }
+.toast-warning { border-left: 3px solid #f59e0b; }
 
 @keyframes toastIn {
     from { opacity: 0; transform: translateX(100px); }
@@ -1050,6 +1063,49 @@ const SHIFT_TYPES = {
     izin: { label: 'Izin', start: '', end: '', hours: 0 },
 };
 
+const SHIFT_EMOJI = {
+    sabah: '\uD83C\uDF05',
+    aksam: '\uD83C\uDF06',
+    gece: '\uD83C\uDF19',
+    ogle: '\u2600\uFE0F',
+    izin: '\uD83C\uDFD6\uFE0F',
+    ozel: '\u26A1',
+};
+
+const RESMI_TATILLER = {
+    fixed: {
+        '01-01': 'Yilbasi',
+        '04-23': 'Ulusal Egemenlik ve Cocuk Bayrami',
+        '05-01': 'Emek ve Dayanisma Gunu',
+        '05-19': "Ataturk'u Anma, Genclik ve Spor Bayrami",
+        '07-15': 'Demokrasi ve Milli Birlik Gunu',
+        '08-30': 'Zafer Bayrami',
+        '10-29': 'Cumhuriyet Bayrami',
+    },
+    variable: {
+        '2025-03-30': 'Ramazan Bayrami (1. Gun)',
+        '2025-03-31': 'Ramazan Bayrami (2. Gun)',
+        '2025-04-01': 'Ramazan Bayrami (3. Gun)',
+        '2025-06-06': 'Kurban Bayrami (1. Gun)',
+        '2025-06-07': 'Kurban Bayrami (2. Gun)',
+        '2025-06-08': 'Kurban Bayrami (3. Gun)',
+        '2025-06-09': 'Kurban Bayrami (4. Gun)',
+        '2026-03-20': 'Ramazan Bayrami (1. Gun)',
+        '2026-03-21': 'Ramazan Bayrami (2. Gun)',
+        '2026-03-22': 'Ramazan Bayrami (3. Gun)',
+        '2026-05-27': 'Kurban Bayrami (1. Gun)',
+        '2026-05-28': 'Kurban Bayrami (2. Gun)',
+        '2026-05-29': 'Kurban Bayrami (3. Gun)',
+        '2026-05-30': 'Kurban Bayrami (4. Gun)',
+    }
+};
+
+function getResmiTatil(dateStr) {
+    if (RESMI_TATILLER.variable[dateStr]) return RESMI_TATILLER.variable[dateStr];
+    const mmdd = dateStr.slice(5);
+    return RESMI_TATILLER.fixed[mmdd] || null;
+}
+
 function loadData() {
     const saved = localStorage.getItem(DB_KEY);
     if (saved) return JSON.parse(saved);
@@ -1121,13 +1177,13 @@ function showToast(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     const icon = document.createElement('span');
-    icon.textContent = type === 'success' ? '\u2705' : '\u274C';
+    icon.textContent = type === 'success' ? '\u2705' : type === 'warning' ? '\u26A0\uFE0F' : '\u274C';
     const text = document.createElement('span');
     text.textContent = message;
     toast.appendChild(icon);
     toast.appendChild(text);
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => toast.remove(), 5000);
 }
 
 function openModal(title, content) {
@@ -1199,10 +1255,12 @@ function renderWeekly() {
     html += '<div class="grid-cell">Calisan</div>';
     dates.forEach((date, i) => {
         const isToday = date === today;
+        const tatil = getResmiTatil(date);
         const d = fromLocalDateString(date);
-        html += `<div class="grid-cell ${isToday ? 'today' : ''}">
+        html += `<div class="grid-cell ${isToday ? 'today' : ''}${tatil ? ' holiday-cell' : ''}" ${tatil ? `title="${tatil}"` : ''}>
             <span class="day-name">${DAYS_SHORT[i]}</span>
             <span class="day-num">${d.getDate()}</span>
+            ${tatil ? '<span class="holiday-icon">\uD83C\uDFDB\uFE0F</span>' : ''}
         </div>`;
     });
     html += '</div>';
@@ -1685,8 +1743,22 @@ function saveShift(employeeId, date) {
     }
 
     saveData();
+    checkConsecutiveShiftWarning(employeeId, date, type);
     closeModal();
     renderCurrentTab();
+}
+
+function checkConsecutiveShiftWarning(employeeId, date, type) {
+    if (type === 'izin') return;
+    const prevWeekDate = new Date(fromLocalDateString(date));
+    prevWeekDate.setDate(prevWeekDate.getDate() - 7);
+    const prevDateStr = toLocalDateString(prevWeekDate);
+    const prevShift = data.shifts.find(s => s.employeeId === employeeId && s.date === prevDateStr && s.type === type);
+    if (prevShift) {
+        const typeLabel = (SHIFT_TYPES[type] || {}).label || type;
+        const emp = data.employees.find(e => e.id === employeeId);
+        showToast((emp ? emp.name : 'Calisan') + ' 2 hafta ust uste ' + typeLabel + ' vardiyasinda!', 'warning');
+    }
 }
 
 function editShift(id) {
@@ -1839,6 +1911,7 @@ function generateShiftMessage(employeeId) {
     const weekEnd = dates[6];
     const dayNames = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
     const monthNames = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    const SEP = '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
 
     function fmtDate(dateStr) {
         const d = fromLocalDateString(dateStr);
@@ -1849,23 +1922,42 @@ function generateShiftMessage(employeeId) {
     let totalHours = 0;
     dates.forEach((date, i) => {
         const shifts = data.shifts.filter(s => s.employeeId === employeeId && s.date === date);
+        const tatil = getResmiTatil(date);
+        const dayHeader = '\uD83D\uDCC5 ' + dayNames[i] + ', ' + fmtDate(date) + (tatil ? '  \uD83C\uDFDB\uFE0F' : '');
+
+        lines.push(SEP);
+        lines.push(dayHeader);
+
+        if (tatil) {
+            lines.push('\u26A0\uFE0F  RESMi TATiL: ' + tatil);
+        }
+
         if (shifts.length === 0) {
-            lines.push(dayNames[i] + ', ' + fmtDate(date) + ': Vardiya yok');
+            lines.push('   Vardiya yok');
         } else {
             shifts.forEach(s => {
                 const typeInfo = SHIFT_TYPES[s.type] || { label: s.type };
-                const detail = s.type === 'izin' ? 'Izin' : (typeInfo.label + ' ' + s.start + '-' + s.end);
-                lines.push(dayNames[i] + ', ' + fmtDate(date) + ': ' + detail);
+                const emoji = SHIFT_EMOJI[s.type] || '\uD83D\uDD52';
+                let detail;
+                if (s.type === 'izin') {
+                    detail = emoji + ' iZiN';
+                } else {
+                    const label = typeInfo.label.toUpperCase();
+                    detail = emoji + ' ' + label + ' VARDiYASI  |  ' + s.start + ' \u2192 ' + s.end;
+                }
+                lines.push('   ' + detail);
                 totalHours += s.hours || 0;
             });
         }
     });
+    lines.push(SEP);
 
     return 'Merhaba ' + emp.name + ',\n' +
-        fmtDate(currentWeekStart) + ' - ' + fmtDate(weekEnd) + ' haftasi vardiya programiniz:\n\n' +
+        '\uD83D\uDCCB HAFTALIK VARDiYA PROGRAMi\n' +
+        fmtDate(currentWeekStart) + ' - ' + fmtDate(weekEnd) + '\n\n' +
         lines.join('\n') + '\n\n' +
-        'Toplam: ' + totalHours + ' saat\n' +
-        'Iyi calismalar!';
+        '\u23F1 Toplam: ' + totalHours + ' saat\n' +
+        '\uD83D\uDC4B iyi calismalar!';
 }
 
 function sendEmployeeNotification(employeeId) {

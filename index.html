@@ -1804,9 +1804,10 @@ function onTimeChange() {
 
     const planned = type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? calcHours(start, end) : 0);
     const hasActual = actualStart && actualEnd;
-    // Preset vardiyalarda (sabah/aksam/gece/ogle) mola düşülür, ozel/izin'de düşülmez
-    const breakDeduction = (SHIFT_TYPES[type] && SHIFT_TYPES[type].hours > 0) ? 0.5 : 0;
-    const actual = hasActual ? Math.max(0, calcHours(actualStart, actualEnd) - breakDeduction) : planned;
+    // 7.5 saat ve üzeri olan her vardiyadan (ozel dahil) 30 dk mola düşülür
+    const actualClock = hasActual ? calcHours(actualStart, actualEnd) : 0;
+    const breakDeduction = actualClock >= 7.5 ? 0.5 : 0;
+    const actual = hasActual ? Math.max(0, actualClock - breakDeduction) : planned;
     const overtime = hasActual ? actual - planned : 0;
 
     const plannedEl = document.getElementById('planned-hours');
@@ -1838,11 +1839,15 @@ function saveShift(employeeId, date) {
         return;
     }
 
-    const plannedHours = type === 'izin' ? 0 : (type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? calcHours(start, end) : 0));
+    // Planlanan saat: preset tiplerden SHIFT_TYPES gelir (7.5s); ozel için saat farkı, ≥7.5h ise mola düşülür
+    const rawPlanned = type === 'izin' ? 0 : (type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? calcHours(start, end) : 0));
+    const plannedBreak = (!SHIFT_TYPES[type] && rawPlanned >= 7.5) ? 0.5 : 0;
+    const plannedHours = type === 'izin' ? 0 : Math.max(0, rawPlanned - plannedBreak);
     const hasActual = actualStart && actualEnd;
-    // Preset vardiyalarda (sabah/aksam/gece/ogle) 30 dk mola düşülür; ozel ve izin'de düşülmez
-    const breakDeduction = (SHIFT_TYPES[type] && SHIFT_TYPES[type].hours > 0) ? 0.5 : 0;
-    const actualHours = type === 'izin' ? 0 : (hasActual ? Math.max(0, calcHours(actualStart, actualEnd) - breakDeduction) : plannedHours);
+    // Gerçek saatte de: ≥7.5 saat clock ise 30 dk mola düşülür
+    const actualClock = hasActual ? calcHours(actualStart, actualEnd) : 0;
+    const actualBreak = actualClock >= 7.5 ? 0.5 : 0;
+    const actualHours = type === 'izin' ? 0 : (hasActual ? Math.max(0, actualClock - actualBreak) : plannedHours);
     const overtime = type === 'izin' ? 0 : (hasActual ? actualHours - plannedHours : 0);
 
     const existing = data.shifts.filter(s => s.employeeId === employeeId && s.date === date);

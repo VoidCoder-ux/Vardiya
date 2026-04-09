@@ -1451,9 +1451,8 @@ function renderEmployees() {
         const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const weekShifts = data.shifts.filter(s => s.employeeId === emp.id && weekDates.includes(s.date));
         const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
-        const totalOvertime = weekShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
-
         const target = emp.weeklyTarget || 40;
+        const totalOvertime = totalHours > target ? totalHours - target : 0;
         const progress = Math.min((totalHours / target) * 100, 100);
         const progressColor = totalHours > target ? '#f59e0b' : totalHours >= target * 0.8 ? '#22c55e' : '#a78bfa';
 
@@ -1487,7 +1486,12 @@ function renderSummary() {
     const weekShifts = data.shifts.filter(s => dates.includes(s.date));
     const totalShifts = weekShifts.length;
     const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
-    const totalOvertime = weekShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
+    // Fazla mesai: her çalışanın toplam saati - haftalık hedef (hedef bazlı)
+    const totalOvertime = data.employees.reduce((sum, emp) => {
+        const empHours = weekShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + (s.actualHours || s.hours || 0), 0);
+        const ot = empHours - (emp.weeklyTarget || 40);
+        return sum + (ot > 0 ? ot : 0);
+    }, 0);
 
     const sabahCount = weekShifts.filter(s => s.type === 'sabah').length;
     const aksamCount = weekShifts.filter(s => s.type === 'aksam').length;
@@ -1554,7 +1558,6 @@ function renderSummary() {
         tableHtml += `<td>${emp.name}</td>`;
 
         let empTotal = 0;
-        let empOvertime = 0;
         dates.forEach(date => {
             const dayShifts = data.shifts.filter(s => s.employeeId === emp.id && s.date === date);
             if (dayShifts.length > 0) {
@@ -1563,7 +1566,6 @@ function renderSummary() {
                     const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
                     const badgeClass = getShiftBadgeClass(shift.type);
                     empTotal += shift.actualHours || shift.hours || 0;
-                    empOvertime += shift.overtime || 0;
                     const badgeText = shift.type === 'izin' ? typeInfo.label : `${typeInfo.label} ${shift.start}-${shift.end}`;
                     cellHtml += `<span class="shift-badge ${badgeClass}" style="margin:0 0 2px 0;font-size:0.6rem;">${badgeText}</span>`;
                 });
@@ -1574,8 +1576,10 @@ function renderSummary() {
             }
         });
 
+        const empTarget = emp.weeklyTarget || 40;
+        const empOvertime = empTotal - empTarget;
         tableHtml += `<td><strong>${empTotal}s</strong></td>`;
-        tableHtml += `<td style="color:${empOvertime > 0 ? '#f59e0b' : 'inherit'}">${empOvertime !== 0 ? (empOvertime > 0 ? '+' : '') + empOvertime.toFixed(1) : '-'}</td>`;
+        tableHtml += `<td style="color:${empOvertime > 0 ? '#f59e0b' : empOvertime < 0 ? '#ef4444' : 'inherit'}">${empOvertime !== 0 ? (empOvertime > 0 ? '+' : '') + empOvertime.toFixed(1) : '-'}</td>`;
         tableHtml += '</tr>';
     });
 
@@ -2357,7 +2361,13 @@ function renderMonthly() {
     const monthShifts = data.shifts.filter(s => allDates.includes(s.date));
     const totalShifts = monthShifts.length;
     const totalHours = monthShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
-    const totalOvertime = monthShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
+    const weeksInMonth = Math.ceil(allDates.length / 7);
+    const totalOvertime = data.employees.reduce((sum, emp) => {
+        const empH = monthShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + (s.actualHours || s.hours || 0), 0);
+        const monthTarget = (emp.weeklyTarget || 40) * weeksInMonth;
+        const ot = empH - monthTarget;
+        return sum + (ot > 0 ? ot : 0);
+    }, 0);
     const izinCount = monthShifts.filter(s => s.type === 'izin').length;
 
     document.getElementById('monthly-stats').innerHTML = `
@@ -2382,11 +2392,11 @@ function renderMonthly() {
     data.employees.forEach(emp => {
         const empShifts = monthShifts.filter(s => s.employeeId === emp.id);
         const hours = empShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
-        const ot = empShifts.reduce((sum, s) => sum + (s.overtime || 0), 0);
+        const monthTarget = (emp.weeklyTarget || 40) * weeksInMonth;
+        const ot = hours - monthTarget;
         const counts = { sabah:0, aksam:0, gece:0, ogle:0, izin:0, ozel:0 };
         empShifts.forEach(s => { if (counts[s.type] !== undefined) counts[s.type]++; });
         const workedDays = empShifts.filter(s => s.type !== 'izin').length;
-        const weeksInMonth = Math.ceil(allDates.length / 7);
         const avgPerWeek = weeksInMonth > 0 ? (workedDays / weeksInMonth).toFixed(1) : 0;
 
         const otClass = ot > 0 ? 'monthly-ot-pos' : ot < 0 ? 'monthly-ot-neg' : '';

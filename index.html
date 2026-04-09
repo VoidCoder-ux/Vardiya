@@ -914,6 +914,30 @@ header h1 {
 .notify-employee-name { font-weight: 600; font-size: 0.9rem; }
 .notify-employee-shifts { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 3px; line-height: 1.5; white-space: pre-line; }
 .notify-no-phone { font-size: 0.75rem; color: rgba(255,100,100,0.7); font-style: italic; margin-top: 3px; }
+
+/* Toplu Mesaj Modal */
+.bulk-filters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.bulk-filter-label { font-size:0.72rem; color:rgba(255,255,255,0.4); align-self:center; margin-right:2px; white-space:nowrap; }
+.bulk-filter-btn { padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.7); cursor:pointer; font-size:0.75rem; transition:all 0.2s; }
+.bulk-filter-btn:hover { border-color:rgba(167,139,250,0.5); color:#fff; }
+.bulk-filter-btn.active { background:#a78bfa; border-color:#a78bfa; color:#fff; font-weight:600; }
+.bulk-select-bar { display:flex; gap:8px; margin-bottom:10px; align-items:center; font-size:0.8rem; color:rgba(255,255,255,0.5); flex-wrap:wrap; }
+.bulk-select-bar button { font-size:0.75rem; padding:3px 10px; }
+.notify-employee-row.bulk-row { cursor:pointer; padding-left:4px; }
+.notify-employee-row.bulk-row:hover { background:rgba(255,255,255,0.03); border-radius:8px; }
+.bulk-checkbox { width:18px; height:18px; accent-color:#a78bfa; cursor:pointer; flex-shrink:0; }
+.bulk-mode-tabs { display:flex; gap:8px; margin-bottom:14px; }
+.bulk-mode-tab { flex:1; padding:7px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:rgba(255,255,255,0.5); cursor:pointer; font-size:0.82rem; transition:all 0.2s; text-align:center; }
+.bulk-mode-tab:hover { border-color:rgba(167,139,250,0.4); }
+.bulk-mode-tab.active { background:rgba(167,139,250,0.15); border-color:#a78bfa; color:#a78bfa; font-weight:600; }
+.bulk-custom-section { margin-bottom:10px; }
+.bulk-custom-msg { width:100%; min-height:80px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#fff; padding:10px; font-size:0.85rem; resize:vertical; box-sizing:border-box; font-family:inherit; }
+.bulk-custom-msg:focus { outline:none; border-color:#a78bfa; }
+.bulk-custom-msg::placeholder { color:rgba(255,255,255,0.3); }
+.bulk-send-btn { background:linear-gradient(135deg,#25D366,#128C7E); color:#fff; border:none; }
+.bulk-send-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.bulk-hidden { display:none !important; }
+.bulk-no-result { text-align:center; color:rgba(255,255,255,0.3); font-size:0.85rem; padding:20px 0; }
     </style>
 </head>
 <body>
@@ -951,6 +975,7 @@ header h1 {
                 <button class="btn btn-secondary" id="btn-copy-week" title="Onceki haftanin vardiyalarini kopyala">&#128203; Kopyala</button>
                 <button class="btn btn-danger btn-sm" id="btn-clear-week" title="Bu haftanin tum vardiyalarini sil">&#128465; Temizle</button>
                 <button class="btn btn-whatsapp" id="btn-notify-all" title="Haftalik vardiylari WhatsApp ile bildir">&#128240; Bildirim Gonder</button>
+                <button class="btn btn-primary" id="btn-bulk-msg" title="Secili calisanlara toplu mesaj gonder">&#128172; Toplu Mesaj</button>
             </div>
 
             <div class="week-legend">
@@ -1061,6 +1086,9 @@ let currentTab = 'weekly';
 let currentWeekStart = getMonday(new Date());
 let editingShiftId = null;
 let editingEmployeeId = null;
+let bulkDayFilter = null;
+let bulkTypeFilter = null;
+let bulkMode = 'vardiya';
 
 const DAYS = ['Pazartesi', 'Sali', 'Carsamba', 'Persembe', 'Cuma', 'Cumartesi', 'Pazar'];
 const DAYS_SHORT = ['Pzt', 'Sal', 'Car', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -2029,6 +2057,194 @@ function showAllNotifications() {
     openModal('WhatsApp Vardiya Bildirimleri', content);
 }
 
+function showBulkMessaging() {
+    if (data.employees.length === 0) {
+        showToast('Hic calisan eklenmemis', 'error');
+        return;
+    }
+    bulkDayFilter = null;
+    bulkTypeFilter = null;
+    bulkMode = 'vardiya';
+
+    const dates = getWeekDates(currentWeekStart);
+    const monthNames = ['Oca', 'Sub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Agu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+    function fmtDate(dateStr) {
+        const d = fromLocalDateString(dateStr);
+        return d.getDate() + ' ' + monthNames[d.getMonth()];
+    }
+    const weekEnd = dates[6];
+
+    const dayBtns = [{ label: 'Tum Hafta', val: null }]
+        .concat(DAYS_SHORT.map((s, i) => ({ label: s, val: i })))
+        .map(b => `<button class="bulk-filter-btn${b.val === null ? ' active' : ''}" onclick="setBulkDayFilter(${b.val === null ? 'null' : b.val})" data-day="${b.val === null ? 'null' : b.val}">${b.label}</button>`)
+        .join('');
+
+    const typeBtns = [{ label: 'Tumu', val: null }]
+        .concat([
+            { label: '🌅 Sabah', val: 'sabah' },
+            { label: '🌆 Aksam', val: 'aksam' },
+            { label: '🌙 Gece', val: 'gece' },
+            { label: '☀️ Ogle', val: 'ogle' },
+            { label: '🏖️ Izin', val: 'izin' },
+        ])
+        .map(b => `<button class="bulk-filter-btn${b.val === null ? ' active' : ''}" onclick="setBulkTypeFilter(${b.val === null ? 'null' : "'"+b.val+"'"})" data-type="${b.val === null ? 'null' : b.val}">${b.label}</button>`)
+        .join('');
+
+    const content = `
+        <p style="font-size:0.78rem;color:rgba(255,255,255,0.35);margin-bottom:12px;">${fmtDate(currentWeekStart)} - ${fmtDate(weekEnd)} haftasi</p>
+
+        <div class="bulk-mode-tabs">
+            <button class="bulk-mode-tab active" id="bulk-tab-vardiya" onclick="setBulkMode('vardiya')">📋 Vardiya Bildirimi</button>
+            <button class="bulk-mode-tab" id="bulk-tab-ozel" onclick="setBulkMode('ozel')">✏️ Ozel Mesaj</button>
+        </div>
+
+        <div style="margin-bottom:6px;">
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-bottom:4px;">Gun filtresi:</div>
+            <div class="bulk-filters" id="bulk-day-filters">${dayBtns}</div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-bottom:4px;">Vardiya filtresi:</div>
+            <div class="bulk-filters" id="bulk-type-filters">${typeBtns}</div>
+        </div>
+
+        <div class="bulk-custom-section bulk-hidden" id="bulk-custom-section">
+            <textarea class="bulk-custom-msg" id="bulk-custom-text" placeholder="Tum secili calisanlara gonderilecek mesaji yazin..."></textarea>
+        </div>
+
+        <div class="bulk-select-bar">
+            <button class="btn btn-sm btn-secondary" onclick="toggleBulkSelectAll(true)">Tumunu Sec</button>
+            <button class="btn btn-sm btn-secondary" onclick="toggleBulkSelectAll(false)">Hicbirini</button>
+            <span id="bulk-count-label" style="margin-left:4px;"></span>
+        </div>
+
+        <div class="notify-list" id="bulk-employee-list"></div>
+
+        <div class="form-actions" style="margin-top:14px;">
+            <button class="btn bulk-send-btn" id="bulk-send-btn" onclick="sendBulkWhatsApp()" disabled>&#128240; Secilenlere Gonder (0 kisi)</button>
+            <button class="btn btn-secondary" onclick="closeModal()">Kapat</button>
+        </div>
+    `;
+    openModal('Toplu WhatsApp Mesaji', content);
+    renderBulkEmployeeList();
+}
+
+function getBulkFilteredEmployees() {
+    const dates = getWeekDates(currentWeekStart);
+    return data.employees.filter(emp => {
+        if (bulkDayFilter === null && bulkTypeFilter === null) return true;
+        const empShifts = data.shifts.filter(s => s.employeeId === emp.id);
+        if (bulkDayFilter !== null && bulkTypeFilter !== null) {
+            return empShifts.some(s => s.date === dates[bulkDayFilter] && s.type === bulkTypeFilter);
+        }
+        if (bulkDayFilter !== null) {
+            return empShifts.some(s => s.date === dates[bulkDayFilter]);
+        }
+        return empShifts.some(s => dates.includes(s.date) && s.type === bulkTypeFilter);
+    });
+}
+
+function renderBulkEmployeeList() {
+    const list = document.getElementById('bulk-employee-list');
+    if (!list) return;
+    const employees = getBulkFilteredEmployees();
+    if (employees.length === 0) {
+        list.innerHTML = '<div class="bulk-no-result">Bu filtreye uyan calisan bulunamadi</div>';
+        updateBulkCount();
+        return;
+    }
+    list.innerHTML = employees.map(emp => {
+        const preview = generateShiftMessage(emp.id).split('\n').slice(2, 8).join('\n');
+        const waBtn = emp.phone
+            ? `<a href="${getWhatsAppLink(emp.phone, generateShiftMessage(emp.id))}" target="_blank" class="btn btn-sm btn-whatsapp" style="text-decoration:none;white-space:nowrap;flex-shrink:0;">&#128240;</a>`
+            : '';
+        const phoneInfo = emp.phone ? '' : '<span style="font-size:0.7rem;color:rgba(255,100,100,0.6);">Telefon yok</span>';
+        return `<div class="notify-employee-row bulk-row" onclick="toggleBulkCheck('${emp.id}')">
+            <input type="checkbox" class="bulk-checkbox" id="bchk-${emp.id}" data-empid="${emp.id}" ${emp.phone ? '' : 'disabled'} onclick="event.stopPropagation();updateBulkCount()">
+            <div class="notify-employee-info" style="flex:1;min-width:0;">
+                <div class="notify-employee-name">${emp.name}${emp.role ? ' <span style="font-weight:400;opacity:0.5;font-size:0.8rem;">· '+emp.role+'</span>' : ''}</div>
+                <div class="notify-employee-shifts">${preview}</div>
+                ${phoneInfo}
+            </div>
+            ${waBtn}
+        </div>`;
+    }).join('');
+    updateBulkCount();
+}
+
+function toggleBulkCheck(empId) {
+    const chk = document.getElementById('bchk-' + empId);
+    if (!chk || chk.disabled) return;
+    chk.checked = !chk.checked;
+    updateBulkCount();
+}
+
+function toggleBulkSelectAll(select) {
+    document.querySelectorAll('.bulk-checkbox:not(:disabled)').forEach(chk => {
+        chk.checked = select;
+    });
+    updateBulkCount();
+}
+
+function updateBulkCount() {
+    const checked = document.querySelectorAll('.bulk-checkbox:checked');
+    const n = checked.length;
+    const label = document.getElementById('bulk-count-label');
+    const btn = document.getElementById('bulk-send-btn');
+    if (label) label.textContent = n > 0 ? n + ' calisan secildi' : '';
+    if (btn) {
+        btn.textContent = '📱 Secilenlere Gonder (' + n + ' kisi)';
+        btn.disabled = n === 0;
+    }
+}
+
+function setBulkDayFilter(val) {
+    bulkDayFilter = val === 'null' || val === null ? null : parseInt(val);
+    document.querySelectorAll('#bulk-day-filters .bulk-filter-btn').forEach(b => {
+        b.classList.toggle('active', String(b.dataset.day) === String(val === null ? 'null' : val));
+    });
+    renderBulkEmployeeList();
+}
+
+function setBulkTypeFilter(val) {
+    bulkTypeFilter = (val === 'null' || val === null) ? null : val;
+    document.querySelectorAll('#bulk-type-filters .bulk-filter-btn').forEach(b => {
+        b.classList.toggle('active', String(b.dataset.type) === String(val === null ? 'null' : val));
+    });
+    renderBulkEmployeeList();
+}
+
+function setBulkMode(mode) {
+    bulkMode = mode;
+    document.getElementById('bulk-tab-vardiya').classList.toggle('active', mode === 'vardiya');
+    document.getElementById('bulk-tab-ozel').classList.toggle('active', mode === 'ozel');
+    const customSection = document.getElementById('bulk-custom-section');
+    if (customSection) customSection.classList.toggle('bulk-hidden', mode === 'vardiya');
+}
+
+function sendBulkWhatsApp() {
+    const checked = Array.from(document.querySelectorAll('.bulk-checkbox:checked'));
+    if (checked.length === 0) return;
+    const customText = bulkMode === 'ozel' ? (document.getElementById('bulk-custom-text') || {}).value || '' : '';
+    if (bulkMode === 'ozel' && !customText.trim()) {
+        showToast('Lutfen gondermek istediginiz mesaji yazin', 'error');
+        return;
+    }
+    let sent = 0;
+    let noPhone = 0;
+    checked.forEach(chk => {
+        const empId = chk.dataset.empid;
+        const emp = data.employees.find(e => e.id === empId);
+        if (!emp || !emp.phone) { noPhone++; return; }
+        const msg = bulkMode === 'ozel' ? customText : generateShiftMessage(empId);
+        const link = getWhatsAppLink(emp.phone, msg);
+        window.open(link, '_blank');
+        sent++;
+    });
+    closeModal();
+    if (sent > 0) showToast(sent + ' calisana mesaj gonderildi');
+    if (noPhone > 0) showToast(noPhone + ' calisanin telefonu tanimli degil', 'warning');
+}
+
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
 });
@@ -2043,6 +2259,7 @@ document.getElementById('btn-export').addEventListener('click', exportToCSV);
 document.getElementById('btn-copy-week').addEventListener('click', copyPreviousWeek);
 document.getElementById('btn-clear-week').addEventListener('click', clearCurrentWeek);
 document.getElementById('btn-notify-all').addEventListener('click', showAllNotifications);
+document.getElementById('btn-bulk-msg').addEventListener('click', showBulkMessaging);
 document.getElementById('btn-backup').addEventListener('click', backupData);
 document.getElementById('btn-restore').addEventListener('click', () => document.getElementById('restore-file-input').click());
 document.getElementById('restore-file-input').addEventListener('change', restoreData);

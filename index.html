@@ -1235,7 +1235,27 @@ function loadData() {
         if (!parsed.templates) parsed.templates = [];
         return parsed;
     }
-    return { employees: [], shifts: [], templates: [] };
+    return { employees: [], shifts: [], templates: [], dataVersion: 2 };
+}
+
+// v2: Eski ozel vardiyalarda mola kesintisi eksikse düzelt (data atandiktan sonra cagrilir)
+function migrateData() {
+    if (data.dataVersion >= 2) return;
+    data.shifts = data.shifts.map(s => {
+        if (s.type && !SHIFT_TYPES[s.type] && s.type !== 'izin' && s.start && s.end) {
+            const rawDur = calcHours(s.start, s.end);
+            if (rawDur >= 8 && Math.abs((s.hours || 0) - rawDur) < 0.01) {
+                return {
+                    ...s,
+                    hours: Math.max(0, rawDur - 0.5),
+                    actualHours: Math.max(0, (s.actualHours || rawDur) - 0.5),
+                };
+            }
+        }
+        return s;
+    });
+    data.dataVersion = 2;
+    saveData();
 }
 
 function saveData() {
@@ -1746,11 +1766,11 @@ function showShiftForm(employeeId, date, shift = null) {
             <div class="overtime-display">
                 <div class="overtime-item">
                     <span>Planlanan:</span>
-                    <strong id="planned-hours">${curType && SHIFT_TYPES[curType] ? SHIFT_TYPES[curType].hours : calcHours(curStart, curEnd).toFixed(1)}s</strong>
+                    <strong id="planned-hours">${curType && SHIFT_TYPES[curType] ? SHIFT_TYPES[curType].hours : (() => { const d = calcHours(curStart, curEnd); return Math.max(0, d - (d >= 8 ? 0.5 : 0)).toFixed(1); })()}s</strong>
                 </div>
                 <div class="overtime-item">
                     <span>Gercek:</span>
-                    <strong id="actual-hours">${hasActual ? calcHours(curActualStart, curActualEnd).toFixed(1) : '-'}s</strong>
+                    <strong id="actual-hours">${hasActual ? (() => { const d = calcHours(curActualStart, curActualEnd); const bd = (SHIFT_TYPES[curType] && SHIFT_TYPES[curType].hours > 0) ? 0.5 : (calcHours(curStart, curEnd) >= 8 ? 0.5 : 0); return Math.max(0, d - bd).toFixed(1); })() : '-'}s</strong>
                 </div>
                 <div class="overtime-item highlight">
                     <span>Fazla:</span>
@@ -2791,6 +2811,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+migrateData();
 renderWeekly();
 checkAndShowShare();
 

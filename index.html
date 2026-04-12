@@ -1766,6 +1766,7 @@ function showShiftForm(employeeId, date, shift = null) {
         </div>
     `;
     openModal(title, content);
+    onTimeChange();
 }
 
 let selectedShiftType = '';
@@ -1802,10 +1803,12 @@ function onTimeChange() {
     const actualEnd = document.getElementById('shift-actual-end').value;
     const type = selectedShiftType;
 
-    const planned = type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? calcHours(start, end) : 0);
+    const rawDuration = (!SHIFT_TYPES[type] && start && end) ? calcHours(start, end) : 0;
+    const ozelBreak = rawDuration >= 8 ? 0.5 : 0;
+    const planned = type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? Math.max(0, rawDuration - ozelBreak) : 0);
     const hasActual = actualStart && actualEnd;
-    // Preset vardiyalarda (sabah/aksam/gece/ogle) mola düşülür, ozel/izin'de düşülmez
-    const breakDeduction = (SHIFT_TYPES[type] && SHIFT_TYPES[type].hours > 0) ? 0.5 : 0;
+    // Preset vardiyalarda (sabah/aksam/gece/ogle) mola düşülür; ozel'de >= 8 saat ise düşülür
+    const breakDeduction = (SHIFT_TYPES[type] && SHIFT_TYPES[type].hours > 0) ? 0.5 : ozelBreak;
     const actual = hasActual ? Math.max(0, calcHours(actualStart, actualEnd) - breakDeduction) : planned;
     const overtime = hasActual ? actual - planned : 0;
 
@@ -1838,10 +1841,12 @@ function saveShift(employeeId, date) {
         return;
     }
 
-    const plannedHours = type === 'izin' ? 0 : (type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? calcHours(start, end) : 0));
+    const rawDuration = (!SHIFT_TYPES[type] && start && end) ? calcHours(start, end) : 0;
+    const ozelBreak = rawDuration >= 8 ? 0.5 : 0;
+    const plannedHours = type === 'izin' ? 0 : (type && SHIFT_TYPES[type] ? SHIFT_TYPES[type].hours : (start && end ? Math.max(0, rawDuration - ozelBreak) : 0));
     const hasActual = actualStart && actualEnd;
-    // Preset vardiyalarda (sabah/aksam/gece/ogle) 30 dk mola düşülür; ozel ve izin'de düşülmez
-    const breakDeduction = (SHIFT_TYPES[type] && SHIFT_TYPES[type].hours > 0) ? 0.5 : 0;
+    // Preset vardiyalarda (sabah/aksam/gece/ogle) 30 dk mola düşülür; ozel'de >= 8 saat ise düşülür
+    const breakDeduction = (SHIFT_TYPES[type] && SHIFT_TYPES[type].hours > 0) ? 0.5 : ozelBreak;
     const actualHours = type === 'izin' ? 0 : (hasActual ? Math.max(0, calcHours(actualStart, actualEnd) - breakDeduction) : plannedHours);
     const overtime = type === 'izin' ? 0 : (hasActual ? actualHours - plannedHours : 0);
 

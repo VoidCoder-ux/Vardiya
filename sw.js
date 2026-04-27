@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vardiya-v1';
+const CACHE_NAME = 'vardiya-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -25,18 +25,29 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
 
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const fetched = fetch(e.request).then((response) => {
+  if (e.request.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname === '/') {
+    e.respondWith(
+      fetch(e.request).then((response) => {
         if (response && response.status === 200) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', clone));
         }
         return response;
-      }).catch(() => cached);
+      }).catch(() => caches.match(e.request).then((cached) => cached || caches.match('./index.html')))
+    );
+    return;
+  }
 
-      return cached || fetched;
-    })
+  e.respondWith(
+    caches.match(e.request).then((cached) => cached || fetch(e.request).then((response) => {
+      if (response && response.status === 200) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+      }
+      return response;
+    }))
   );
 });

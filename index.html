@@ -1164,6 +1164,8 @@ header h1 {
 
     <script>
 const DB_KEY = 'weeklyShiftTracker';
+const DATA_VERSION = 2;
+let dataLoadWarning = '';
 let data = loadData();
 let currentTab = 'weekly';
 let currentWeekStart = getMonday(new Date());
@@ -1228,14 +1230,120 @@ function getResmiTatil(dateStr) {
     return RESMI_TATILLER.fixed[mmdd] || null;
 }
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[ch]));
+}
+
+function jsArg(value) {
+    return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
+function safeNumber(value, fallback = 0) {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+}
+
+function formatHours(value) {
+    const n = safeNumber(value, 0);
+    return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+function isDateString(value) {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function normalizeTime(value) {
+    return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value) ? value : '';
+}
+
+function createDefaultData() {
+    return { employees: [], shifts: [], templates: [], dataVersion: DATA_VERSION };
+}
+
+function normalizeEmployee(emp) {
+    if (!emp || typeof emp !== 'object') return null;
+    const id = String(emp.id || generateId());
+    const name = String(emp.name || '').trim();
+    if (!id || !name) return null;
+    return {
+        id,
+        name,
+        role: String(emp.role || ''),
+        phone: String(emp.phone || ''),
+        weeklyTarget: Math.min(Math.max(safeNumber(emp.weeklyTarget, 45), 0), 168),
+        createdAt: String(emp.createdAt || new Date().toISOString()),
+    };
+}
+
+function normalizeShift(shift) {
+    if (!shift || typeof shift !== 'object') return null;
+    const employeeId = String(shift.employeeId || '');
+    const date = String(shift.date || '');
+    if (!employeeId || !isDateString(date)) return null;
+    const type = String(shift.type || 'ozel');
+    const hours = safeNumber(shift.hours, 0);
+    const hasActualHours = Object.prototype.hasOwnProperty.call(shift, 'actualHours');
+    return {
+        id: String(shift.id || generateId()),
+        employeeId,
+        date,
+        type,
+        start: normalizeTime(shift.start),
+        end: normalizeTime(shift.end),
+        hours,
+        actualStart: normalizeTime(shift.actualStart),
+        actualEnd: normalizeTime(shift.actualEnd),
+        actualHours: hasActualHours ? safeNumber(shift.actualHours, hours) : hours,
+        overtime: safeNumber(shift.overtime, 0),
+        note: String(shift.note || ''),
+        createdAt: String(shift.createdAt || new Date().toISOString()),
+    };
+}
+
+function normalizeTemplate(template) {
+    if (!template || typeof template !== 'object') return null;
+    const shifts = Array.isArray(template.shifts) ? template.shifts.map(s => ({
+        employeeId: String(s.employeeId || ''),
+        dayOffset: Math.min(Math.max(parseInt(s.dayOffset, 10) || 0, 0), 6),
+        type: String(s.type || 'ozel'),
+        start: normalizeTime(s.start),
+        end: normalizeTime(s.end),
+        hours: safeNumber(s.hours, 0),
+    })).filter(s => s.employeeId) : [];
+    return {
+        id: String(template.id || generateId()),
+        name: String(template.name || 'Adsiz sablon'),
+        createdAt: String(template.createdAt || new Date().toISOString()),
+        shifts,
+    };
+}
+
+function normalizeData(raw) {
+    if (!raw || typeof raw !== 'object') return createDefaultData();
+    return {
+        employees: Array.isArray(raw.employees) ? raw.employees.map(normalizeEmployee).filter(Boolean) : [],
+        shifts: Array.isArray(raw.shifts) ? raw.shifts.map(normalizeShift).filter(Boolean) : [],
+        templates: Array.isArray(raw.templates) ? raw.templates.map(normalizeTemplate).filter(Boolean) : [],
+        dataVersion: Object.prototype.hasOwnProperty.call(raw, 'dataVersion') ? safeNumber(raw.dataVersion, DATA_VERSION) : 1,
+    };
+}
+
 function loadData() {
-    const saved = localStorage.getItem(DB_KEY);
-    if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.templates) parsed.templates = [];
-        return parsed;
+    try {
+        const saved = localStorage.getItem(DB_KEY);
+        if (!saved) return createDefaultData();
+        return normalizeData(JSON.parse(saved));
+    } catch (err) {
+        dataLoadWarning = 'Kayitli veri okunamadi. Uygulama bos veriyle acildi; lutfen yedeginizi kontrol edin.';
+        console.warn('Vardiya verisi okunamadi', err);
+        return createDefaultData();
     }
-    return { employees: [], shifts: [], templates: [], dataVersion: 2 };
 }
 
 // v2: Eski ozel vardiyalarda mola kesintisi eksikse düzelt (data atandiktan sonra cagrilir)
@@ -1244,11 +1352,12 @@ function migrateData() {
     data.shifts = data.shifts.map(s => {
         if (s.type && !SHIFT_TYPES[s.type] && s.type !== 'izin' && s.start && s.end) {
             const rawDur = calcHours(s.start, s.end);
-            if (rawDur >= 8 && Math.abs((s.hours || 0) - rawDur) < 0.01) {
+            if (rawDur >= 8 && Math.abs(safeNumber(s.hours, 0) - rawDur) < 0.01) {
+                const actualBase = Object.prototype.hasOwnProperty.call(s, 'actualHours') ? safeNumber(s.actualHours, rawDur) : rawDur;
                 return {
                     ...s,
                     hours: Math.max(0, rawDur - 0.5),
-                    actualHours: Math.max(0, (s.actualHours || rawDur) - 0.5),
+                    actualHours: Math.max(0, actualBase - 0.5),
                 };
             }
         }
@@ -1316,6 +1425,18 @@ function calcHours(start, end) {
     let totalMin = (eh * 60 + em) - (sh * 60 + sm);
     if (totalMin < 0) totalMin += 24 * 60;
     return totalMin / 60;
+}
+
+function getShiftHours(shift) {
+    if (!shift || shift.type === 'izin') return 0;
+    if (Object.prototype.hasOwnProperty.call(shift, 'actualHours')) {
+        return safeNumber(shift.actualHours, safeNumber(shift.hours, 0));
+    }
+    return safeNumber(shift.hours, 0);
+}
+
+function getShiftLabel(type) {
+    return (SHIFT_TYPES[type] || { label: String(type || 'Ozel') }).label;
 }
 
 function showToast(message, type = 'success') {
@@ -1419,8 +1540,8 @@ function renderWeekly() {
         const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         html += '<div class="grid-row">';
         html += `<div class="grid-cell employee-name-cell">
-            <div class="emp-avatar">${initials}</div>
-            <span>${emp.name}</span>
+            <div class="emp-avatar">${escapeHtml(initials)}</div>
+            <span>${escapeHtml(emp.name)}</span>
         </div>`;
 
         dates.forEach(date => {
@@ -1430,16 +1551,17 @@ function renderWeekly() {
             html += `<div class="grid-cell ${isToday ? 'today-col' : ''}">`;
 
             shifts.forEach(shift => {
-                const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
+                const typeLabel = getShiftLabel(shift.type);
                 const badgeClass = getShiftBadgeClass(shift.type);
                 const otBadge = shift.overtime > 0 ? `<span class="ot-tag">+${shift.overtime.toFixed(1)}</span>` : '';
-                const badgeText = shift.type === 'izin' ? typeInfo.label : `${typeInfo.label} ${shift.start}-${shift.end}`;
-                html += `<div class="shift-badge ${badgeClass}" onclick="editShift('${shift.id}')" title="${shift.type === 'izin' ? typeInfo.label : typeInfo.label + ': ' + shift.start + ' - ' + shift.end}">
-                    ${badgeText}${otBadge}
+                const badgeText = shift.type === 'izin' ? typeLabel : `${typeLabel} ${shift.start}-${shift.end}`;
+                const title = shift.type === 'izin' ? typeLabel : typeLabel + ': ' + shift.start + ' - ' + shift.end;
+                html += `<div class="shift-badge ${badgeClass}" onclick="editShift(${jsArg(shift.id)})" title="${escapeHtml(title)}">
+                    ${escapeHtml(badgeText)}${otBadge}
                 </div>`;
             });
 
-            html += `<div class="add-shift-cell" onclick="showShiftForm('${emp.id}', '${date}')">+</div>`;
+            html += `<div class="add-shift-cell" onclick="showShiftForm(${jsArg(emp.id)}, ${jsArg(date)})">+</div>`;
             html += '</div>';
         });
 
@@ -1470,28 +1592,28 @@ function renderEmployees() {
     container.innerHTML = filtered.map(emp => {
         const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const weekShifts = data.shifts.filter(s => s.employeeId === emp.id && weekDates.includes(s.date));
-        const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+        const totalHours = weekShifts.reduce((sum, s) => sum + getShiftHours(s), 0);
         const target = emp.weeklyTarget || 45;
         const totalOvertime = totalHours > target ? totalHours - target : 0;
-        const progress = Math.min((totalHours / target) * 100, 100);
+        const progress = target > 0 ? Math.min((totalHours / target) * 100, 100) : 100;
         const progressColor = totalHours > target ? '#f59e0b' : totalHours >= target * 0.8 ? '#22c55e' : '#a78bfa';
 
         return `
             <div class="employee-card">
                 <div class="employee-info">
-                    <div class="employee-avatar">${initials}</div>
+                    <div class="employee-avatar">${escapeHtml(initials)}</div>
                     <div style="flex:1;">
-                        <div class="employee-name">${emp.name}</div>
-                        <div class="employee-role">${emp.role || 'Calisan'} - Bu hafta ${totalHours}/${target}s${totalOvertime > 0 ? ` (<span style="color:#f59e0b">+${totalOvertime.toFixed(1)} fazla</span>)` : ''}${emp.phone ? ` · <span style="color:rgba(255,255,255,0.35)">${emp.phone}</span>` : ''}</div>
+                        <div class="employee-name">${escapeHtml(emp.name)}</div>
+                        <div class="employee-role">${escapeHtml(emp.role || 'Calisan')} - Bu hafta ${formatHours(totalHours)}/${formatHours(target)}s${totalOvertime > 0 ? ` (<span style="color:#f59e0b">+${totalOvertime.toFixed(1)} fazla</span>)` : ''}${emp.phone ? ` &middot; <span style="color:rgba(255,255,255,0.35)">${escapeHtml(emp.phone)}</span>` : ''}</div>
                         <div style="margin-top:6px;background:rgba(255,255,255,0.08);border-radius:4px;height:4px;overflow:hidden;">
                             <div style="width:${progress}%;height:100%;background:${progressColor};border-radius:4px;transition:width 0.3s;"></div>
                         </div>
                     </div>
                 </div>
                 <div class="employee-actions">
-                    ${emp.phone ? `<button class="btn btn-sm btn-whatsapp" onclick="sendEmployeeNotification('${emp.id}')" title="WhatsApp ile vardiya bildir">&#128240; WA</button>` : ''}
-                    <button class="btn btn-sm btn-secondary" onclick="editEmployee('${emp.id}')">Duzenle</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteEmployee('${emp.id}')">Sil</button>
+                    ${emp.phone ? `<button class="btn btn-sm btn-whatsapp" onclick="sendEmployeeNotification(${jsArg(emp.id)})" title="WhatsApp ile vardiya bildir">&#128240; WA</button>` : ''}
+                    <button class="btn btn-sm btn-secondary" onclick="editEmployee(${jsArg(emp.id)})">Duzenle</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteEmployee(${jsArg(emp.id)})">Sil</button>
                 </div>
             </div>
         `;
@@ -1505,10 +1627,10 @@ function renderSummary() {
 
     const weekShifts = data.shifts.filter(s => dates.includes(s.date));
     const totalShifts = weekShifts.length;
-    const totalHours = weekShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+    const totalHours = weekShifts.reduce((sum, s) => sum + getShiftHours(s), 0);
     // Fazla mesai: her çalışanın toplam saati - haftalık hedef (hedef bazlı)
     const totalOvertime = data.employees.reduce((sum, emp) => {
-        const empHours = weekShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + (s.actualHours || s.hours || 0), 0);
+        const empHours = weekShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + getShiftHours(s), 0);
         const ot = empHours - (emp.weeklyTarget || 45);
         return sum + (ot > 0 ? ot : 0);
     }, 0);
@@ -1526,7 +1648,7 @@ function renderSummary() {
             <div class="summary-stat-label">Toplam Vardiya</div>
         </div>
         <div class="summary-stat">
-            <div class="summary-stat-value">${totalHours}</div>
+            <div class="summary-stat-value">${formatHours(totalHours)}</div>
             <div class="summary-stat-label">Toplam Saat</div>
         </div>
         <div class="summary-stat">
@@ -1575,7 +1697,7 @@ function renderSummary() {
 
     data.employees.forEach(emp => {
         tableHtml += '<tr>';
-        tableHtml += `<td>${emp.name}</td>`;
+        tableHtml += `<td>${escapeHtml(emp.name)}</td>`;
 
         let empTotal = 0;
         dates.forEach(date => {
@@ -1583,11 +1705,11 @@ function renderSummary() {
             if (dayShifts.length > 0) {
                 let cellHtml = '<td>';
                 dayShifts.forEach(shift => {
-                    const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
+                    const typeLabel = getShiftLabel(shift.type);
                     const badgeClass = getShiftBadgeClass(shift.type);
-                    empTotal += shift.actualHours || shift.hours || 0;
-                    const badgeText = shift.type === 'izin' ? typeInfo.label : `${typeInfo.label} ${shift.start}-${shift.end}`;
-                    cellHtml += `<span class="shift-badge ${badgeClass}" style="margin:0 0 2px 0;font-size:0.6rem;">${badgeText}</span>`;
+                    empTotal += getShiftHours(shift);
+                    const badgeText = shift.type === 'izin' ? typeLabel : `${typeLabel} ${shift.start}-${shift.end}`;
+                    cellHtml += `<span class="shift-badge ${badgeClass}" style="margin:0 0 2px 0;font-size:0.6rem;">${escapeHtml(badgeText)}</span>`;
                 });
                 cellHtml += '</td>';
                 tableHtml += cellHtml;
@@ -1598,7 +1720,7 @@ function renderSummary() {
 
         const empTarget = emp.weeklyTarget || 45;
         const empOvertime = empTotal - empTarget;
-        tableHtml += `<td><strong>${empTotal}s</strong></td>`;
+        tableHtml += `<td><strong>${formatHours(empTotal)}s</strong></td>`;
         tableHtml += `<td style="color:${empOvertime > 0 ? '#f59e0b' : empOvertime < 0 ? '#ef4444' : 'inherit'}">${empOvertime !== 0 ? (empOvertime > 0 ? '+' : '') + empOvertime.toFixed(1) : '-'}</td>`;
         tableHtml += '</tr>';
     });
@@ -1613,19 +1735,19 @@ function showEmployeeForm(employee = null) {
     const content = `
         <div class="form-group">
             <label>Ad Soyad</label>
-            <input type="text" id="emp-name" value="${employee ? employee.name : ''}" placeholder="Ad Soyad girin">
+            <input type="text" id="emp-name" value="${employee ? escapeHtml(employee.name) : ''}" placeholder="Ad Soyad girin">
         </div>
         <div class="form-group">
             <label>Pozisyon</label>
-            <input type="text" id="emp-role" value="${employee ? employee.role || '' : ''}" placeholder="Pozisyon girin">
+            <input type="text" id="emp-role" value="${employee ? escapeHtml(employee.role || '') : ''}" placeholder="Pozisyon girin">
         </div>
         <div class="form-group">
             <label>Telefon Numarasi</label>
-            <input type="tel" id="emp-phone" value="${employee ? employee.phone || '' : ''}" placeholder="05xx xxx xx xx">
+            <input type="tel" id="emp-phone" value="${employee ? escapeHtml(employee.phone || '') : ''}" placeholder="05xx xxx xx xx">
         </div>
         <div class="form-group">
             <label>Haftalik Hedef Saat</label>
-            <input type="number" id="emp-weekly-target" value="${employee ? employee.weeklyTarget || 45 : 45}" min="0" max="168" placeholder="45">
+            <input type="number" id="emp-weekly-target" value="${employee ? safeNumber(employee.weeklyTarget, 45) : 45}" min="0" max="168" placeholder="45">
         </div>
         <div class="form-actions">
             <button class="btn btn-secondary" onclick="closeModal()">Iptal</button>
@@ -1639,7 +1761,7 @@ function saveEmployee() {
     const name = document.getElementById('emp-name').value.trim();
     const role = document.getElementById('emp-role').value.trim();
     const phone = document.getElementById('emp-phone').value.trim();
-    const weeklyTarget = parseInt(document.getElementById('emp-weekly-target').value) || 45;
+    const weeklyTarget = Math.min(Math.max(safeNumber(document.getElementById('emp-weekly-target').value, 45), 0), 168);
 
     if (!name) {
         showToast('Lutfen ad soyad girin', 'error');
@@ -1746,7 +1868,7 @@ function showShiftForm(employeeId, date, shift = null) {
 
         <div class="form-group" style="margin-top:10px;">
             <label>Not (opsiyonel)</label>
-            <input type="text" id="shift-note" value="${curNote}" placeholder="Not ekle...">
+            <input type="text" id="shift-note" value="${escapeHtml(curNote)}" placeholder="Not ekle...">
         </div>
 
         <div class="divider" onclick="toggleOvertimeSection()" style="cursor:pointer;">
@@ -1780,9 +1902,9 @@ function showShiftForm(employeeId, date, shift = null) {
         </div>
 
         <div class="form-actions">
-            ${shift ? `<button class="btn btn-danger" onclick="deleteShift('${shift.id}')">Sil</button>` : ''}
+            ${shift ? `<button class="btn btn-danger" onclick="deleteShift(${jsArg(shift.id)})">Sil</button>` : ''}
             <button class="btn btn-secondary" onclick="closeModal()">Iptal</button>
-            <button class="btn btn-primary" onclick="saveShift('${employeeId}', '${date}')">Kaydet</button>
+            <button class="btn btn-primary" onclick="saveShift(${jsArg(employeeId)}, ${jsArg(date)})">Kaydet</button>
         </div>
     `;
     openModal(title, content);
@@ -1962,11 +2084,12 @@ function restoreData(event) {
     reader.onload = function(e) {
         try {
             const parsed = JSON.parse(e.target.result);
-            const restored = parsed.data || parsed;
-            if (!restored.employees || !restored.shifts) {
+            const rawRestored = parsed.data || parsed;
+            if (!rawRestored || !Array.isArray(rawRestored.employees) || !Array.isArray(rawRestored.shifts)) {
                 showToast('Gecersiz yedek dosyasi', 'error');
                 return;
             }
+            const restored = normalizeData(rawRestored);
             if (!confirm(`${restored.employees.length} calisan ve ${restored.shifts.length} vardiya geri yuklenecek. Mevcut veriler silinecek. Devam?`)) return;
             data = restored;
             saveData();
@@ -2049,8 +2172,7 @@ function exportToCSV() {
     let csv = 'Calisan,Tarih,Tip,Baslangic,Bitis,Planlanan,Gelis,Cikis,Gercek,Fazla Mesai,Not\n';
     weekShifts.forEach(s => {
         const emp = data.employees.find(e => e.id === s.employeeId);
-        const typeInfo = SHIFT_TYPES[s.type] || { label: s.type };
-        csv += [emp ? emp.name : 'Bilinmeyen', s.date, typeInfo.label, s.start, s.end, s.hours, s.actualStart, s.actualEnd, s.actualHours, s.overtime, s.note || ''].map(csvEscape).join(',') + '\n';
+        csv += [emp ? emp.name : 'Bilinmeyen', s.date, getShiftLabel(s.type), s.start, s.end, s.hours, s.actualStart, s.actualEnd, getShiftHours(s), s.overtime, s.note || ''].map(csvEscape).join(',') + '\n';
     });
 
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -2100,17 +2222,16 @@ function generateShiftMessage(employeeId) {
             lines.push('   Vardiya yok');
         } else {
             shifts.forEach(s => {
-                const typeInfo = SHIFT_TYPES[s.type] || { label: s.type };
                 const emoji = SHIFT_EMOJI[s.type] || '🕒';
                 let detail;
                 if (s.type === 'izin') {
                     detail = emoji + ' iZiN';
                 } else {
-                    const label = typeInfo.label.toUpperCase();
+                    const label = getShiftLabel(s.type).toUpperCase();
                     detail = emoji + ' ' + label + ' VARDiYASI  |  ' + s.start + ' → ' + s.end;
                 }
                 lines.push('   ' + detail);
-                totalHours += s.hours || 0;
+                totalHours += getShiftHours(s);
             });
         }
     });
@@ -2120,7 +2241,7 @@ function generateShiftMessage(employeeId) {
         '📋 HAFTALIK VARDiYA PROGRAMi\n' +
         fmtDate(currentWeekStart) + ' - ' + fmtDate(weekEnd) + '\n\n' +
         lines.join('\n') + '\n\n' +
-        '⏱ Toplam: ' + totalHours + ' saat\n' +
+        '⏱ Toplam: ' + formatHours(totalHours) + ' saat\n' +
         '👋 iyi calismalar!';
 }
 
@@ -2150,15 +2271,15 @@ function showAllNotifications() {
             const link = getWhatsAppLink(emp.phone, generateShiftMessage(emp.id));
             return `<div class="notify-employee-row">
                 <div class="notify-employee-info">
-                    <div class="notify-employee-name">${emp.name}</div>
-                    <div class="notify-employee-shifts">${preview}</div>
+                    <div class="notify-employee-name">${escapeHtml(emp.name)}</div>
+                    <div class="notify-employee-shifts">${escapeHtml(preview)}</div>
                 </div>
-                <a href="${link}" target="_blank" class="btn btn-sm btn-whatsapp" style="text-decoration:none;white-space:nowrap;">&#128240; Gonder</a>
+                <a href="${escapeHtml(link)}" target="_blank" class="btn btn-sm btn-whatsapp" style="text-decoration:none;white-space:nowrap;">&#128240; Gonder</a>
             </div>`;
         } else {
             return `<div class="notify-employee-row">
                 <div class="notify-employee-info">
-                    <div class="notify-employee-name">${emp.name}</div>
+                    <div class="notify-employee-name">${escapeHtml(emp.name)}</div>
                     <div class="notify-no-phone">Telefon numarasi tanimli degil - Calisanlar sekmesinden ekleyin</div>
                 </div>
             </div>`;
@@ -2281,14 +2402,14 @@ function renderBulkEmployeeList() {
     list.innerHTML = employees.map(emp => {
         const preview = generateShiftMessage(emp.id).split('\n').slice(2, 8).join('\n');
         const waBtn = emp.phone
-            ? `<a href="${getWhatsAppLink(emp.phone, generateShiftMessage(emp.id))}" target="_blank" class="btn btn-sm btn-whatsapp" style="text-decoration:none;white-space:nowrap;flex-shrink:0;">&#128240;</a>`
+            ? `<a href="${escapeHtml(getWhatsAppLink(emp.phone, generateShiftMessage(emp.id)))}" target="_blank" class="btn btn-sm btn-whatsapp" style="text-decoration:none;white-space:nowrap;flex-shrink:0;">&#128240;</a>`
             : '';
         const phoneInfo = emp.phone ? '' : '<span style="font-size:0.7rem;color:rgba(255,100,100,0.6);">Telefon yok</span>';
-        return `<div class="notify-employee-row bulk-row" onclick="toggleBulkCheck('${emp.id}')">
-            <input type="checkbox" class="bulk-checkbox" id="bchk-${emp.id}" data-empid="${emp.id}" ${emp.phone ? '' : 'disabled'} onclick="event.stopPropagation();updateBulkCount()">
+        return `<div class="notify-employee-row bulk-row" onclick="toggleBulkCheck(${jsArg(emp.id)})">
+            <input type="checkbox" class="bulk-checkbox" id="bchk-${escapeHtml(emp.id)}" data-empid="${escapeHtml(emp.id)}" ${emp.phone ? '' : 'disabled'} onclick="event.stopPropagation();updateBulkCount()">
             <div class="notify-employee-info" style="flex:1;min-width:0;">
-                <div class="notify-employee-name">${emp.name}${emp.role ? ' <span style="font-weight:400;opacity:0.5;font-size:0.8rem;">· '+emp.role+'</span>' : ''}</div>
-                <div class="notify-employee-shifts">${preview}</div>
+                <div class="notify-employee-name">${escapeHtml(emp.name)}${emp.role ? ' <span style="font-weight:400;opacity:0.5;font-size:0.8rem;">&middot; '+escapeHtml(emp.role)+'</span>' : ''}</div>
+                <div class="notify-employee-shifts">${escapeHtml(preview)}</div>
                 ${phoneInfo}
             </div>
             ${waBtn}
@@ -2389,10 +2510,10 @@ function renderMonthly() {
 
     const monthShifts = data.shifts.filter(s => allDates.includes(s.date));
     const totalShifts = monthShifts.length;
-    const totalHours = monthShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+    const totalHours = monthShifts.reduce((sum, s) => sum + getShiftHours(s), 0);
     const weeksInMonth = Math.ceil(allDates.length / 7);
     const totalOvertime = data.employees.reduce((sum, emp) => {
-        const empH = monthShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + (s.actualHours || s.hours || 0), 0);
+        const empH = monthShifts.filter(s => s.employeeId === emp.id).reduce((a, s) => a + getShiftHours(s), 0);
         const monthTarget = (emp.weeklyTarget || 45) * weeksInMonth;
         const ot = empH - monthTarget;
         return sum + (ot > 0 ? ot : 0);
@@ -2401,7 +2522,7 @@ function renderMonthly() {
 
     document.getElementById('monthly-stats').innerHTML = `
         <div class="monthly-stat"><div class="monthly-stat-value">${totalShifts}</div><div class="monthly-stat-label">Toplam Vardiya</div></div>
-        <div class="monthly-stat"><div class="monthly-stat-value">${totalHours}</div><div class="monthly-stat-label">Toplam Saat</div></div>
+        <div class="monthly-stat"><div class="monthly-stat-value">${formatHours(totalHours)}</div><div class="monthly-stat-label">Toplam Saat</div></div>
         <div class="monthly-stat"><div class="monthly-stat-value">${totalOvertime > 0 ? '+' : ''}${totalOvertime.toFixed(1)}</div><div class="monthly-stat-label">Fazla Mesai</div></div>
         <div class="monthly-stat"><div class="monthly-stat-value">${izinCount}</div><div class="monthly-stat-label">Izin Gunu</div></div>
         <div class="monthly-stat"><div class="monthly-stat-value">${data.employees.length}</div><div class="monthly-stat-label">Calisan</div></div>
@@ -2412,15 +2533,13 @@ function renderMonthly() {
         return;
     }
 
-    const SHIFT_COLORS = { sabah:'#fbbf24', aksam:'#f97316', gece:'#6366f1', ogle:'#22c55e', izin:'#06b6d4', ozel:'#a855f7' };
-
     let html = '<table class="monthly-table"><thead><tr>';
     html += '<th>Calisan</th><th>Toplam Saat</th><th>Fazla Mesai</th><th>Sabah</th><th>Aksam</th><th>Gece</th><th>Ogle</th><th>Izin</th><th>Vardiya / Hafta</th>';
     html += '</tr></thead><tbody>';
 
     data.employees.forEach(emp => {
         const empShifts = monthShifts.filter(s => s.employeeId === emp.id);
-        const hours = empShifts.reduce((sum, s) => sum + (s.actualHours || s.hours || 0), 0);
+        const hours = empShifts.reduce((sum, s) => sum + getShiftHours(s), 0);
         const monthTarget = (emp.weeklyTarget || 45) * weeksInMonth;
         const ot = hours - monthTarget;
         const counts = { sabah:0, aksam:0, gece:0, ogle:0, izin:0, ozel:0 };
@@ -2432,8 +2551,8 @@ function renderMonthly() {
         const otText = ot !== 0 ? (ot > 0 ? '+' : '') + ot.toFixed(1) : '-';
 
         html += `<tr>
-            <td><div class="monthly-emp-name">${emp.name}</div><div class="monthly-emp-role">${emp.role || ''}</div></td>
-            <td><span class="monthly-hours">${hours}s</span></td>
+            <td><div class="monthly-emp-name">${escapeHtml(emp.name)}</div><div class="monthly-emp-role">${escapeHtml(emp.role || '')}</div></td>
+            <td><span class="monthly-hours">${formatHours(hours)}s</span></td>
             <td class="${otClass}">${otText}</td>
             <td>${counts.sabah || '-'}</td>
             <td>${counts.aksam || '-'}</td>
@@ -2463,12 +2582,12 @@ function showTemplateModal() {
             const dateStr = d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear();
             return `<div class="template-item">
                 <div>
-                    <div class="template-name">${tpl.name}</div>
+                    <div class="template-name">${escapeHtml(tpl.name)}</div>
                     <div class="template-meta">${empCount} calisan · ${shiftCount} vardiya · ${dateStr}</div>
                 </div>
                 <div class="template-actions">
-                    <button class="btn btn-sm btn-template-apply" onclick="applyTemplate('${tpl.id}')">Uygula</button>
-                    <button class="btn btn-sm btn-template-del" onclick="deleteTemplate('${tpl.id}')">Sil</button>
+                    <button class="btn btn-sm btn-template-apply" onclick="applyTemplate(${jsArg(tpl.id)})">Uygula</button>
+                    <button class="btn btn-sm btn-template-del" onclick="deleteTemplate(${jsArg(tpl.id)})">Sil</button>
                 </div>
             </div>`;
         }).join('');
@@ -2589,10 +2708,10 @@ function renderWeeklyWarnings() {
     // Hedef saate ulaşamayan çalışanları kontrol et
     data.employees.forEach(emp => {
         const empShifts = data.shifts.filter(s => s.employeeId === emp.id && dates.includes(s.date));
-        const totalHours = empShifts.reduce((sum, s) => sum + (s.hours || 0), 0);
+        const totalHours = empShifts.reduce((sum, s) => sum + getShiftHours(s), 0);
         const target = emp.weeklyTarget || 45;
         if (empShifts.length > 0 && totalHours < target) {
-            warnings.push({ text: emp.name + ': ' + totalHours + 'h / ' + target + 'h (eksik ' + (target - totalHours) + 'h)', type: 'info' });
+            warnings.push({ text: emp.name + ': ' + formatHours(totalHours) + 'h / ' + formatHours(target) + 'h (eksik ' + formatHours(target - totalHours) + 'h)', type: 'info' });
         }
     });
 
@@ -2604,7 +2723,7 @@ function renderWeeklyWarnings() {
     container.innerHTML = '<div class="warning-panel">' +
         warnings.map(w => `<div class="warning-item${w.type === 'warn' ? ' danger' : ''}">
             <span class="warning-icon">${w.type === 'warn' ? '⚠️' : '📊'}</span>
-            <span>${w.text}</span>
+            <span>${escapeHtml(w.text)}</span>
         </div>`).join('') +
         '</div>';
 }
@@ -2626,7 +2745,7 @@ function shareWeek() {
         employees: data.employees.map(e => ({ id: e.id, name: e.name, role: e.role || '' })),
         shifts: weekShifts.map(s => ({
             eid: s.employeeId, date: s.date, type: s.type,
-            start: s.start, end: s.end, hours: s.hours
+            start: s.start, end: s.end, hours: getShiftHours(s)
         }))
     };
 
@@ -2646,9 +2765,9 @@ function shareWeek() {
             <div style="font-size:0.78rem;color:rgba(255,255,255,0.5);margin-top:4px;">${data.employees.length} calisan · ${weekShifts.length} vardiya</div>
         </div>
         <p style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:8px;">Asagidaki linki kopyalayarak paylasabilirsiniz. Link acildiginda haftalik program goruntulenir (veri degistirilemez).</p>
-        <div class="share-url-box" id="share-url-text">${shareUrl}</div>
+        <div class="share-url-box" id="share-url-text">${escapeHtml(shareUrl)}</div>
         <div class="form-actions">
-            <button class="btn btn-primary" onclick="copyShareUrl('${encoded}')">&#128203; Linki Kopyala</button>
+            <button class="btn btn-primary" onclick="copyShareUrl(${jsArg(encoded)})">&#128203; Linki Kopyala</button>
             <button class="btn btn-secondary" onclick="closeModal()">Kapat</button>
         </div>
     `;
@@ -2680,13 +2799,35 @@ function fallbackCopy(text) {
     closeModal();
 }
 
+function normalizeSharePayload(payload) {
+    if (!payload || typeof payload !== 'object' || !isDateString(payload.week) || !Array.isArray(payload.employees) || !Array.isArray(payload.shifts)) {
+        return null;
+    }
+    const dates = getWeekDates(payload.week);
+    const employees = payload.employees.map(emp => ({
+        id: String(emp && emp.id || ''),
+        name: String(emp && emp.name || ''),
+        role: String(emp && emp.role || ''),
+    })).filter(emp => emp.id && emp.name);
+    const employeeIds = new Set(employees.map(emp => emp.id));
+    const shifts = payload.shifts.map(shift => ({
+        eid: String(shift && shift.eid || ''),
+        date: String(shift && shift.date || ''),
+        type: String(shift && shift.type || 'ozel'),
+        start: normalizeTime(shift && shift.start),
+        end: normalizeTime(shift && shift.end),
+        hours: safeNumber(shift && shift.hours, 0),
+    })).filter(shift => employeeIds.has(shift.eid) && dates.includes(shift.date));
+    return { week: payload.week, employees, shifts };
+}
+
 function checkAndShowShare() {
     const hash = window.location.hash;
     if (!hash.startsWith('#share=')) return;
     try {
         const encoded = hash.slice(7);
-        const payload = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-        if (!payload.week || !payload.employees || !payload.shifts) return;
+        const payload = normalizeSharePayload(JSON.parse(decodeURIComponent(escape(atob(encoded)))));
+        if (!payload) return;
 
         const dates = getWeekDates(payload.week);
         const MONTH_NAMES = ['Oca','Sub','Mar','Nis','May','Haz','Tem','Agu','Eyl','Eki','Kas','Ara'];
@@ -2705,13 +2846,12 @@ function checkAndShowShare() {
         tableHtml += '</tr></thead><tbody>';
 
         payload.employees.forEach(emp => {
-            tableHtml += `<tr><td style="padding:7px 8px;font-weight:600;">${emp.name}<br><span style="font-size:0.68rem;opacity:0.4;">${emp.role}</span></td>`;
+            tableHtml += `<tr><td style="padding:7px 8px;font-weight:600;">${escapeHtml(emp.name)}<br><span style="font-size:0.68rem;opacity:0.4;">${escapeHtml(emp.role)}</span></td>`;
             dates.forEach(date => {
                 const shift = payload.shifts.find(s => s.eid === emp.id && s.date === date);
                 if (shift) {
-                    const typeInfo = SHIFT_TYPES[shift.type] || { label: shift.type };
                     const cls = getShiftBadgeClass(shift.type);
-                    tableHtml += `<td style="padding:4px;text-align:center;"><span class="shift-badge ${cls}" style="font-size:0.55rem;">${typeInfo.label}</span></td>`;
+                    tableHtml += `<td style="padding:4px;text-align:center;"><span class="shift-badge ${cls}" style="font-size:0.55rem;">${escapeHtml(getShiftLabel(shift.type))}</span></td>`;
                 } else {
                     tableHtml += '<td style="padding:4px;text-align:center;color:rgba(255,255,255,0.15);">-</td>';
                 }
@@ -2813,6 +2953,7 @@ document.addEventListener('keydown', (e) => {
 
 migrateData();
 renderWeekly();
+if (dataLoadWarning) showToast(dataLoadWarning, 'warning');
 checkAndShowShare();
 
 // --- PWA: Service Worker & Install Prompt ---
